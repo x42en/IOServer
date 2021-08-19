@@ -8,10 +8,11 @@
 [![Known Vulnerabilities](https://snyk.io/test/github/x42en/ioserver/badge.svg)](https://snyk.io/test/github/x42en/ioserver)
 
 
-Damn simple way to setup your [Socket.io](http://socket.io) server using coffeescript.
+Damn simple way to setup your [Socket.io](http://socket.io) server using coffeescript or vanilla JS.
 
-This will launch a server on port specified (default: 8080) and will register all method of the class set as service, except ones starting by '_' (underscore).
-These registrated methods will then be accessible as standard client-side socket.io event:
+This will launch a server on hots:port specified (default: localhost:8080) and will register all method of the class set as service, except ones starting by '_' (underscore). The web server is based on [Fastify](https://fastify.io/) so you can even add REST routes and interact with your socket.io rooms and namespaces.  
+  
+The socket.io's registrated methods will then be accessible as standard client-side socket.io event:
 ```coffeescript
   socket.emit 'method_name', data
 ```
@@ -33,7 +34,10 @@ Install with npm:
 
 Require the module:
   ```coffeescript
-    app = require 'ioserver'
+    IOServer = require 'ioserver'
+
+    app = new IOServer
+          verbose: true
   ```
 
 Add manager using:
@@ -48,6 +52,13 @@ Add services using:
     app.addService
       name:      'service_name'
       service:   ServiceClass
+  ```
+
+Add controller using:
+  ```coffeescript
+    app.addController
+      name:      'controller_name'
+      controller:   ControllerClass
   ```
 
 Start the server...
@@ -100,6 +111,63 @@ and even specific socket.id
       event:     'event name'
       data:      data
   ```
+
+You can add controller with Middlewares and routes prefix:
+  ```coffeescript
+    app.addController
+      name:      'controller_name'
+      prefix: '/my_prefix/'
+      controller:   ControllerClass
+      middlewares: [
+        RESTMiddleware
+      ]
+  ```
+
+In order to meet the fastify requirements, some pre-requised are needed to setup REST endpoints.
+1. First your JS class will define your accessible controller's methods
+  ```coffeescript
+  module.exports = class HelloController
+    constructor: (@app) ->
+
+    _isAuthentified: (req, reply, next) ->
+      if not req.headers['x-authentication']?
+        return reply.forbidden()
+      
+      next()
+    
+    world: (req, reply) ->
+      return { message: "Hello world" }
+    
+    display: (req, reply) ->
+      return { message: "Hello #{req.params.message}" }
+    
+    restricted: (req, reply) ->
+      return { message: "Welcome on Private Area" }
+  ```
+
+2. Then setup a routes description file (by default it will be looked-up into a `routes/${controller_name}.json` directory at root level of your project). *You can use different location by specifying `routes` options on IOServer instanciation (see unit-tests for examples).*
+  ```json
+  [
+    {
+      "method": "GET",
+      "url": "/",
+      "handler": "world"
+    },
+    {
+      "method": "GET",
+      "url": "/:message",
+      "handler": "display"
+    },
+    {
+      "method": "GET",
+      "url": "/private/",
+      "handler": "restricted",
+      "preValidation": "_isAuthentified"
+    }
+  ]
+  ```
+**All routes options from [fastify](https://www.fastify.io/docs/latest/Routes/#full-declaration) are supported**
+
 
 Common options are:
   ```coffeescript
@@ -227,6 +295,7 @@ npm --no-git-tag-version version [<newversion> | major | minor | patch]
 ```
 
 ## TODO
-* write better doc
-* publish chat demo example
-* improve unit tests for complete coverage (restricted method)
+* [ ] write better doc
+* [ ] publish chat demo example
+* [x] improve unit tests for complete coverage (restricted method)
+* [x] Add REST API support

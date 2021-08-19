@@ -1,13 +1,19 @@
 (function() {
   // During the test the env variable is set to test
-  var AccessMiddleware, HOST, IOServer, IOServerError, InteractService, PORT, PrivateMiddleware, PrivateService, RegistrationService, SessionManager, StandardService, app, chai, end_point, opts, should, socketio_client;
+  var AccessMiddleware, HOST, HelloController, IOServer, IOServerError, InteractService, PORT, PrivateController, PrivateMiddleware, PrivateService, RegistrationService, RestMiddleware, SessionManager, StandardService, app, chai, chaiHttp, end_point, opts, path, should, socketio_client;
 
   process.env.NODE_ENV = 'test';
 
   // Import required packages
+  path = require('path');
+
   chai = require('chai');
 
+  chaiHttp = require('chai-http');
+
   should = chai.should();
+
+  chai.use(chaiHttp);
 
   socketio_client = require('socket.io-client');
 
@@ -22,6 +28,8 @@
 
   PrivateMiddleware = require(`${__dirname}/middlewares/privateMiddleware`);
 
+  RestMiddleware = require(`${__dirname}/middlewares/restMiddleware`);
+
   // Import socket.io event classes
   StandardService = require(`${__dirname}/services/standardService`);
 
@@ -30,6 +38,11 @@
   RegistrationService = require(`${__dirname}/services/registrationService`);
 
   PrivateService = require(`${__dirname}/services/privateService`);
+
+  // Import REST controllers
+  HelloController = require(`${__dirname}/controllers/helloController`);
+
+  PrivateController = require(`${__dirname}/controllers/privateController`);
 
   // Setup client vars
   HOST = 'localhost';
@@ -43,7 +56,12 @@
   };
 
   // Instanciate IOServer
-  app = new IOServer();
+  app = new IOServer({
+    verbose: true,
+    host: HOST,
+    port: PORT,
+    routes: path.join(process.cwd(), 'test', 'routes')
+  });
 
   // Add session manager used to access private namespace
   app.addManager({
@@ -75,6 +93,20 @@
     name: 'private',
     service: PrivateService,
     middlewares: [AccessMiddleware, PrivateMiddleware]
+  });
+
+  // Add simple controller to test REST
+  app.addController({
+    name: 'hello',
+    controller: HelloController
+  });
+
+  // Add restricted controller to test REST
+  app.addController({
+    name: 'private',
+    prefix: 'restricted',
+    controller: PrivateController,
+    middlewares: [RestMiddleware]
   });
 
   //##################### UNIT TESTS ##########################
@@ -286,7 +318,7 @@
         return done();
       });
     });
-    return it('Check access private method', function(done) {
+    it('Check access private method', function(done) {
       var socket_client;
       socket_client = socketio_client(`${end_point}/registration`, opts);
       return socket_client.emit('register', null, function(data) {
@@ -310,6 +342,70 @@
         });
         socket_client.disconnect();
         return done();
+      });
+    });
+    it('Check REST request to invalid route', function() {
+      return chai.request(end_point).get('/').then(function(res) {
+        var data;
+        res.should.have.status(404);
+        res.should.be.json;
+        data = res.body;
+        data.message.should.equal('Route GET:/ not found');
+        return data.error.should.equal("Not Found");
+      });
+    });
+    it('Check REST request to hello route', function() {
+      return chai.request(end_point).get('/hello').then(function(res) {
+        var data;
+        res.should.have.status(200);
+        res.should.be.json;
+        data = res.body;
+        return data.message.should.equal("Hello world");
+      });
+    });
+    it('Check REST request to hello route with trailing slash', function() {
+      return chai.request(end_point).get('/hello/').then(function(res) {
+        var data;
+        res.should.have.status(200);
+        res.should.be.json;
+        data = res.body;
+        return data.message.should.equal("Hello world");
+      });
+    });
+    it('Check REST request to custom hello route', function() {
+      return chai.request(end_point).get('/hello/foo').then(function(res) {
+        var data;
+        res.should.have.status(200);
+        res.should.be.json;
+        data = res.body;
+        return data.message.should.equal('Hello foo');
+      });
+    });
+    it('Check unauthenticated REST request to restricted route', function() {
+      return chai.request(end_point).get('/hello/private/').then(function(res) {
+        var data;
+        res.should.have.status(403);
+        res.should.be.json;
+        data = res.body;
+        return data.message.should.equal('Forbidden');
+      });
+    });
+    it('Check authenticated REST request to restricted route', function() {
+      return chai.request(end_point).get('/restricted/').then(function(res) {
+        var data;
+        res.should.have.status(403);
+        res.should.be.json;
+        data = res.body;
+        return data.message.should.equal('Forbidden');
+      });
+    });
+    return it('Check authenticated REST request to restricted route', function() {
+      return chai.request(end_point).get('/restricted/').set('x-authentication', 'foobar').then(function(res) {
+        var data;
+        res.should.have.status(200);
+        res.should.be.json;
+        data = res.body;
+        return data.message.should.equal('Welcome on Private Area');
       });
     });
   });

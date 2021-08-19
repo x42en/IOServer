@@ -4,34 +4,34 @@ on:
     branches:
       - master
 jobs:
-  build: 
+  build:
     name: Build and Test package
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [10.x, 12.x, 14.x]
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@master
-    - name: Set up Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@master
-      with:
-        node-version: ${{ matrix.node-version }}
-        registry-url: https://npm.pkg.github.com/
-        scope: '@x42en'
-    - run: npm install
-    - run: npm run build --if-present
-    - run: npm test
-      env:
-        CI: true
-  
+      - name: Checkout repository
+        uses: actions/checkout@master
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@master
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://npm.pkg.github.com/
+          scope: "@x42en"
+      - run: npm install
+      - run: npm run build --if-present
+      - run: npm test
+        env:
+          CI: true
+
   publish:
     name: Publish to NPM & GitHub Package Registry
     runs-on: ubuntu-latest
     if: contains(
-          'refs/heads/master
-          refs/heads/develop'
-        , github.ref) # Publish it only if the push comes from the master or develop branch
+      'refs/heads/master
+      refs/heads/develop'
+      , github.ref) # Publish it only if the push comes from the master or develop branch
     needs: build # We need to wait for the build to be committed before publishing
 
     steps:
@@ -44,20 +44,21 @@ jobs:
         uses: EndBug/version-check@master
         id: check
         with:
+          diff-search: true
           file-url: https://unpkg.com/ioserver@latest/package.json
           static-checking: localIsNew
 
       - name: Version update detected
         if: steps.check.outputs.changed == 'true'
         run: 'echo "Version change found! New version: ${{ steps.check.outputs.version }} (${{ steps.check.outputs.type }})"'
-      
+
       - name: Push tag version
         if: steps.check.outputs.changed == 'true'
         uses: mathieudutour/github-tag-action@v5
         with:
           custom_tag: ${{ steps.check.outputs.version }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Create a GitHub release
         if: steps.check.outputs.changed == 'true'
         uses: actions/create-release@master

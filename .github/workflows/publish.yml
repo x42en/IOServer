@@ -41,7 +41,7 @@ jobs:
           ref: master
 
       - name: Check version changes
-        uses: EndBug/version-check@master
+        uses: EndBug/version-check@v1
         id: check
         with:
           diff-search: true

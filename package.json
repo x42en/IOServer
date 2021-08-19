@@ -1,7 +1,7 @@
 {
   "name": "ioserver",
   "version": "1.2.8",
-  "description": "Damn simple IOServer instance, allowing developpers to add services as simple coffeescript class.",
+  "description": "Damn simple way to setup your Socket.io server using coffeescript or vanilla JS class.",
   "main": "build/ioserver.js",
   "files": [
     "build/"

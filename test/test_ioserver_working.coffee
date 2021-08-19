@@ -2,8 +2,11 @@
 process.env.NODE_ENV = 'test'
 
 # Import required packages
-chai            = require 'chai'
-should          = chai.should()
+path     = require 'path'
+chai     = require 'chai'
+chaiHttp = require('chai-http')
+should   = chai.should()
+chai.use(chaiHttp)
 
 socketio_client = require 'socket.io-client'
 IOServer        = require "#{__dirname}/../build/ioserver"
@@ -13,12 +16,17 @@ IOServer        = require "#{__dirname}/../build/ioserver"
 SessionManager    = require "#{__dirname}/managers/sessionManager"
 AccessMiddleware  = require "#{__dirname}/middlewares/accessMiddleware"
 PrivateMiddleware = require "#{__dirname}/middlewares/privateMiddleware"
+RestMiddleware    = require "#{__dirname}/middlewares/restMiddleware"
 
 # Import socket.io event classes
 StandardService     = require "#{__dirname}/services/standardService"
 InteractService     = require "#{__dirname}/services/interactService"
 RegistrationService = require "#{__dirname}/services/registrationService"
 PrivateService      = require "#{__dirname}/services/privateService"
+
+# Import REST controllers
+HelloController = require "#{__dirname}/controllers/helloController"
+PrivateController = require "#{__dirname}/controllers/privateController"
 
 # Setup client vars
 HOST = 'localhost'
@@ -27,7 +35,12 @@ end_point = "http://#{HOST}:#{PORT}"
 opts = { forceNew: true }
 
 # Instanciate IOServer
-app = new IOServer()
+app = new IOServer({
+    verbose: true
+    host: HOST
+    port: PORT
+    routes: path.join(process.cwd(), 'test', 'routes')
+})
 
 # Add session manager used to access private namespace
 app.addManager
@@ -59,6 +72,20 @@ app.addService
     middlewares: [
         AccessMiddleware,
         PrivateMiddleware
+    ]
+
+# Add simple controller to test REST
+app.addController
+    name: 'hello'
+    controller: HelloController
+
+# Add restricted controller to test REST
+app.addController
+    name: 'private'
+    prefix: 'restricted'
+    controller: PrivateController
+    middlewares: [
+        RestMiddleware
     ]
 
 ###################### UNIT TESTS ##########################
@@ -277,5 +304,77 @@ describe "IOServer simple HTTP working tests", ->
             
             socket_client.disconnect()
             done()
+    
+    it 'Check REST request to invalid route', () ->
+        chai.request(end_point)
+            .get('/')
+            .then (res) ->     
+                res.should.have.status 404
+                res.should.be.json
+
+                data = res.body
+                data.message.should.equal 'Route GET:/ not found'
+                data.error.should.equal "Not Found"
+
+    it 'Check REST request to hello route', () ->
+        chai.request(end_point)
+            .get('/hello')
+            .then (res) ->     
+                res.should.have.status 200
+                res.should.be.json
+
+                data = res.body
+                data.message.should.equal "Hello world"
+    
+    it 'Check REST request to hello route with trailing slash', () ->
+        chai.request(end_point)
+            .get('/hello/')
+            .then (res) ->     
+                res.should.have.status 200
+                res.should.be.json
+
+                data = res.body
+                data.message.should.equal "Hello world"
+    
+    it 'Check REST request to custom hello route', () ->
+        chai.request(end_point)
+            .get('/hello/foo')
+            .then (res) ->     
+                res.should.have.status 200
+                res.should.be.json
+
+                data = res.body
+                data.message.should.equal 'Hello foo'
+    
+    it 'Check unauthenticated REST request to restricted route', () ->
+        chai.request(end_point)
+            .get('/hello/private/')
+            .then (res) ->     
+                res.should.have.status 403
+                res.should.be.json
+
+                data = res.body
+                data.message.should.equal 'Forbidden'
+    
+    it 'Check authenticated REST request to restricted route', () ->
+        chai.request(end_point)
+            .get('/restricted/')
+            .then (res) ->     
+                res.should.have.status 403
+                res.should.be.json
+
+                data = res.body
+                data.message.should.equal 'Forbidden'
+    
+    it 'Check authenticated REST request to restricted route', () ->
+        chai.request(end_point)
+            .get('/restricted/')
+            .set('x-authentication', 'foobar')
+            .then (res) ->     
+                res.should.have.status 200
+                res.should.be.json
+
+                data = res.body
+                data.message.should.equal 'Welcome on Private Area'
 
 #################### END UNIT TESTS #########################

@@ -1,0 +1,18 @@
+[
+  {
+    "method": "GET",
+    "url": "/",
+    "handler": "world"
+  },
+  {
+    "method": "GET",
+    "url": "/:message",
+    "handler": "display"
+  },
+  {
+    "method": "GET",
+    "url": "/private/",
+    "handler": "restricted",
+    "preValidation": "_isAuthentified"
+  }
+]

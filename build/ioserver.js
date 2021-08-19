@@ -1,6 +1,6 @@
 (function() {
   //###################################################
-  //         IOServer - v1.2.7                        #
+  //         IOServer - v1.2.8                        #
   //                                                  #
   //         Damn simple socket.io server             #
   //###################################################
@@ -25,15 +25,25 @@
   // limitations under the License.
 
   // Add required packages
-  var HOST, IOServer, IOServerError, LOG_LEVEL, PORT, TRANSPORTS, VERSION, closer, http,
+  var HOST, IOServer, IOServerError, LOG_LEVEL, PORT, RESERVED_NAMES, REST, TRANSPORTS, VERSION, autoload, closer, fastify, fs, http, path,
     indexOf = [].indexOf;
+
+  fs = require('fs');
+
+  path = require('path');
 
   http = require('http');
 
   closer = require('http-terminator');
 
+  fastify = require('fastify');
+
+  autoload = require('fastify-autoload');
+
   // Set global vars
-  VERSION = '1.2.7';
+  VERSION = '1.2.8';
+
+  REST = false;
 
   PORT = 8080;
 
@@ -43,57 +53,105 @@
 
   TRANSPORTS = ['websocket', 'htmlfile', 'xhr-polling', 'jsonp-polling'];
 
+  RESERVED_NAMES = ['send', 'log', 'verbose'];
+
   module.exports = IOServer = class IOServer {
     // Define the variables used by the server
     constructor(options = {}) {
-      var cookie, cors, e, host, i, m, middleware, mode, port, ref, ref1, ref2, verbose;
+      var _cookie, _cors, _mode, cookie, cors, default_routes, err, host, i, m, mode, port, ref, ref1, ref2, routes, verbose;
       // Allow sending message from external app
       this.sendTo = this.sendTo.bind(this);
       // Set default options
-      ({verbose, host, port, cookie, mode, cors, middleware} = options);
+      ({verbose, host, port, cookie, mode, cors, routes} = options);
       this.host = host ? String(host) : HOST;
       try {
         this.port = port ? Number(port) : PORT;
+        if (this.port <= 0) {
+          throw new Error('Invalid port');
+        }
+        if (this.port > 65535) {
+          throw new Error('Invalid port');
+        }
       } catch (error) {
-        e = error;
-        throw new Error('Invalid port.');
+        err = error;
+        throw new Error(err);
       }
-      this.cookie = cookie ? Boolean(cookie) : false;
+      _cookie = Boolean(cookie) ? Boolean(cookie) : false;
       this.verbose = (ref = String(verbose).toUpperCase(), indexOf.call(LOG_LEVEL, ref) >= 0) ? String(verbose).toUpperCase() : 'ERROR';
+      // Does not yell if route directory does not exists... change that ?
+      default_routes = path.join(process.cwd(), 'routes');
+      this._routes = fs.existsSync(routes) ? String(routes) : default_routes;
       
       // Process transport mode options
-      this.mode = [];
+      _mode = [];
       if (mode) {
         if (ref1 = String(mode).toLowerCase(), indexOf.call(TRANSPORTS, ref1) >= 0) {
-          this.mode.push(String(mode).toLowerCase());
+          _mode.push(String(mode).toLowerCase());
         } else if (mode.constructor === Array) {
           for (i in mode) {
             m = mode[i];
             if (ref2 = String(m).toLowerCase(), indexOf.call(TRANSPORTS, ref2) >= 0) {
-              this.mode.push(m);
+              _mode.push(m);
             }
           }
         }
       } else {
-        this.mode.push('websocket');
-        this.mode.push('polling');
+        _mode.push('websocket');
+        _mode.push('polling');
       }
       
       // Setup CORS since necessary in socket.io v3
-      this.cors = (cors != null) && cors ? cors : {};
-      if (!this.cors.methods) {
-        this.cors.methods = ['GET', 'POST'];
+      _cors = (cors != null) && cors ? cors : {};
+      if (!_cors.methods) {
+        _cors.methods = ['GET', 'POST'];
       }
-      if (!this.cors.origin) {
-        this.cors.origin = [`https://${this.host}`, `http://${this.host}`];
+      if (!_cors.origin) {
+        _cors.origin = [`https://${this.host}`, `http://${this.host}`];
       }
       
       // Setup internal lists
       this.service_list = {};
       this.manager_list = {};
       this.method_list = {};
-      this.middlewares = {};
-      
+      this.controller_list = {};
+      this.middleware_list = {};
+      try {
+        // Instanciate server (needed to register controllers)
+        this._webapp = fastify({
+          logger: this.verbose,
+          ignoreTrailingSlash: true,
+          maxParamLength: 200,
+          caseSensitive: true
+        });
+      } catch (error) {
+        err = error;
+        throw `[!] Unable to instanciate server: ${err}`;
+      }
+      try {
+        // Register standard HTTP error shortcuts
+        this._webapp.register(require('fastify-sensible'));
+      } catch (error) {
+        err = error;
+        throw `[!] Unable to register sensible plugin: ${err}`;
+      }
+      try {
+        // Register standard HTTP error shortcuts
+        this._webapp.register(require('fastify-cors'), _cors);
+      } catch (error) {
+        err = error;
+        throw `[!] Unable to register CORS plugin: ${err}`;
+      }
+      try {
+        // Register socket.io listener
+        this._webapp.register(require('fastify-socket.io'), {
+          transports: _mode,
+          cookie: _cookie,
+          cors: _cors
+        });
+      } catch (error) {
+        err = error;
+        throw `[!] Unable to register socket.io plugin: ${err}`;
+      }
       // Register the global app handle
       // that will be passed to all entities
       this.appHandle = {
@@ -101,7 +159,6 @@
         log: this._logify,
         verbose: this.verbose
       };
-      this.server = null;
     }
 
     _logify(level, text) {
@@ -132,6 +189,10 @@
       return result;
     }
 
+    _method_exists(klass, name) {
+      return klass[name] != null;
+    }
+
     addManager({name, manager}) {
       var err;
       if (!name) {
@@ -140,7 +201,7 @@
       if (name && name.length < 2) {
         throw "[!] Manager name MUST be longer than 2 characters";
       }
-      if (name === 'send') {
+      if (indexOf.call(RESERVED_NAMES, name) >= 0) {
         throw "[!] Sorry this is a reserved name";
       }
       if (!(manager || manager.prototype)) {
@@ -148,10 +209,11 @@
       }
       try {
         // Register manager with handle reference
+        this._logify(7, `[*] Register manager ${name}`);
         return this.manager_list[name] = new manager(this.appHandle);
       } catch (error) {
         err = error;
-        return this._logify(3, `[!] Error while instantiate ${name} -> ${err}`);
+        return this._logify(3, `[!] Error while instantiate ${name} manager -> ${err}`);
       }
     }
 
@@ -159,28 +221,113 @@
     // this class will be bind to a specific namespace
     addService({name, service, middlewares}) {
       var err;
-      if (!(service && service.prototype)) {
-        throw "[!] Service function is mandatory";
-      }
-      
       // Allow global register for '/'
       if (!name) {
         name = '/';
-      
       // Otherwise service must comply certain rules
       } else if (name.length < 2) {
         throw "[!] Service name MUST be longer than 2 characters";
       }
+      if (indexOf.call(RESERVED_NAMES, name) >= 0) {
+        throw "[!] Sorry this is a reserved name";
+      }
+      if (!(service && service.prototype)) {
+        throw "[!] Service function is mandatory";
+      }
       try {
+        // Register service with handle reference
+        this._logify(7, `[*] Register service ${name}`);
         this.service_list[name] = new service(this.appHandle);
       } catch (error) {
         err = error;
-        this._logify(3, `[!] Error while instantiate ${name} -> ${err}`);
+        this._logify(3, `[!] Error while instantiate ${name} service -> ${err}`);
       }
       // list methods of object... it will be the list of io actions
       this.method_list[name] = this._dumpMethods(service);
       // Register middlewares if necessary
-      return this.middlewares[name] = middlewares ? middlewares : [];
+      return this.middleware_list[name] = middlewares ? middlewares : [];
+    }
+
+    
+      // Allow to register easily controllers for REST API
+    // this method should be called automatically when fastify is started
+    addController({name, controller, middlewares, prefix}) {
+      var controller_routes, entry, err, j, len, len1, len2, mdwr, middleware, n, o, option, ref, results;
+      if (!name) {
+        throw "[!] Controller name is mandatory";
+      }
+      if (name.length < 2) {
+        throw "[!] Controller name MUST be longer than 2 characters";
+      }
+      if (indexOf.call(RESERVED_NAMES, name) >= 0) {
+        throw "[!] Sorry this is a reserved name";
+      }
+      if (!(controller && controller.prototype)) {
+        throw "[!] Controller function is mandatory";
+      }
+      if (!middlewares) {
+        middlewares = [];
+      }
+      
+      // Sanitize prefix
+      if (prefix && !prefix.startsWith('/')) {
+        prefix = `/${prefix}`;
+      }
+      if (prefix && prefix.endsWith('/')) {
+        prefix = prefix.slice(0, -1);
+      }
+      try {
+        // Register controller with handle reference
+        this._logify(7, `[*] Register controller ${name}`);
+        this.controller_list[name] = new controller(this.appHandle);
+      } catch (error) {
+        err = error;
+        this._logify(3, `[!] Error while instanciate ${name} controller -> ${err}`);
+      }
+      if (!fs.existsSync(`${this._routes}/${name}.json`)) {
+        throw `[!] Predicted routes file does not exists: ${this._routes}/${name}.json`;
+      }
+      // Load defined routes
+      controller_routes = require(`${this._routes}/${name}.json`);
+// Parse all routes found, and register corresponding controller method
+      results = [];
+      for (j = 0, len = controller_routes.length; j < len; j++) {
+        entry = controller_routes[j];
+        ref = ['onRequest', 'preParsing', 'preValidation', 'preHandler', 'preSerialization', 'onSend', 'onResponse', 'handler', 'errorHandler'];
+        // Auto load function or array of function for fastify routes options
+        for (n = 0, len1 = ref.length; n < len1; n++) {
+          option = ref[n];
+          // Avoid override undefined keys
+          if (!entry[option]) {
+            continue;
+          }
+          // Adapt object using current controller name
+          if (this.controller_list[name][entry[option]] != null) {
+            entry[option] = this.controller_list[name][entry[option]];
+          }
+        }
+        
+        // Adapt all urls if prefix is set, otherwise prefix with controller name
+        entry.url = prefix != null ? `${prefix}${entry.url}` : `/${name}${entry.url}`;
+        
+        // Always setup preValidation middlewares
+        if (entry.preValidation == null) {
+          entry.preValidation = [];
+        }
+        for (o = 0, len2 = middlewares.length; o < len2; o++) {
+          middleware = middlewares[o];
+          mdwr = new middleware();
+          entry.preValidation.push(mdwr.handle(this.appHandle));
+        }
+        try {
+          this._logify(7, `[*] Register controller route ${entry.method} ${entry.url}`);
+          results.push(this._webapp.route(entry));
+        } catch (error) {
+          err = error;
+          results.push(this._logify(3, `[!] Unable to register route entry: ${err}`));
+        }
+      }
+      return results;
     }
 
     // Get service running
@@ -190,12 +337,8 @@
 
     // Launch socket IO and get ready to handle events on connection
     // Pass web server used for connections
-    start(webapp) {
-      var d, day, hours, j, len, manager, manager_name, mdwr, middleware, minutes, month, ns, ref, ref1, ref2, seconds, server, service, service_name;
-      // If nothing set use standard module
-      if (webapp == null) {
-        webapp = http.createServer();
-      }
+    async start() {
+      var d, day, err, hours, manager, manager_name, minutes, month, ns, ref, seconds;
       d = new Date();
       day = d.getDate() < 10 ? `0${d.getDate()}` : d.getDate();
       month = d.getMonth() < 10 ? `0${d.getMonth()}` : d.getMonth();
@@ -204,16 +347,6 @@
       seconds = d.getSeconds() < 10 ? `0${d.getSeconds()}` : d.getSeconds();
       this._logify(4, `################### IOServer v${VERSION} ###################`);
       this._logify(5, `################### ${day}/${month}/${d.getFullYear()} - ${hours}:${minutes}:${seconds} #########################`);
-      
-      // Start web server
-      this._logify(5, `[*] Starting server on https://${this.host}:${this.port} ...`);
-      server = webapp.listen(this.port, this.host);
-      // Start socket.io listener
-      this.io = require('socket.io')(server, {
-        transports: this.mode,
-        cookie: this.cookie,
-        cors: this.cors
-      });
       ns = {};
       ref = this.manager_list;
       // Register all managers
@@ -222,39 +355,55 @@
         this._logify(6, `[*] register ${manager_name} manager`);
         this.appHandle[manager_name] = manager;
       }
-      ref1 = this.service_list;
-      // Register each different services by its namespace
-      for (service_name in ref1) {
-        service = ref1[service_name];
-        ns[service_name] = service_name === '/' ? this.io.of('/') : this.io.of(`/${service_name}`);
-        ref2 = this.middlewares[service_name];
-        // Register middleware for namespace 
-        for (j = 0, len = ref2.length; j < len; j++) {
-          middleware = ref2[j];
-          mdwr = new middleware();
-          ns[service_name].use(mdwr.handle(this.appHandle));
+      // Once webapp is ready
+      this._webapp.ready((err) => {
+        var j, len, mdwr, middleware, ref1, ref2, results, service, service_name;
+        ref1 = this.service_list;
+        // Register each different services by its namespace
+        results = [];
+        for (service_name in ref1) {
+          service = ref1[service_name];
+          ns[service_name] = service_name === '/' ? this._webapp.io.of('/') : this._webapp.io.of(`/${service_name}`);
+          ref2 = this.middleware_list[service_name];
+          // Register middleware for namespace 
+          for (j = 0, len = ref2.length; j < len; j++) {
+            middleware = ref2[j];
+            mdwr = new middleware();
+            ns[service_name].use(mdwr.handle(this.appHandle));
+          }
+          // get ready for connection
+          ns[service_name].on("connection", this._handleEvents(service_name));
+          results.push(this._logify(6, `[*] service ${service_name} registered...`));
         }
-        // get ready for connection
-        ns[service_name].on("connection", this._handleEvents(service_name));
-        this._logify(6, `[*] service ${service_name} registered...`);
+        return results;
+      });
+      try {
+        // Start web server
+        this._logify(5, `[*] Starting server on https://${this.host}:${this.port} ...`);
+        return (await this._webapp.listen(this.port, this.host));
+      } catch (error) {
+        err = error;
+        return this._logify(3, `[!] Unable to start server: ${err}`);
       }
-      
-      // Create terminator handler
-      return this.stopper = closer.createHttpTerminator({server});
     }
 
     
       // Force server stop
     stop() {
-      this._logify(6, "[*] Stopping server");
-      if (this.stopper) {
-        return this.stopper.terminate();
+      var err;
+      try {
+        return this._webapp.close(function() {
+          return this._logify(6, "[*] Server stopped");
+        });
+      } catch (error) {
+        err = error;
+        throw new Error(`[!] Unable to stop server: ${err}`);
       }
     }
 
     sendTo({namespace, event, data, room = false, sid = false} = {}) {
       var ns, sockets;
-      ns = this.io.of(namespace || "/");
+      ns = this._webapp.io.of(namespace || "/");
       // Send event to specific sid if set
       if ((sid != null) && sid) {
         return ns.sockets.get(sid).emit(event, data);

@@ -25,16 +25,12 @@
   // limitations under the License.
 
   // Add required packages
-  var HOST, IOServer, IOServerError, LOG_LEVEL, PORT, RESERVED_NAMES, REST, TRANSPORTS, VERSION, autoload, closer, fastify, fs, http, path,
+  var HOST, IOServer, IOServerError, LOG_LEVEL, PORT, RESERVED_NAMES, REST, TRANSPORTS, VERSION, autoload, fastify, fs, path,
     indexOf = [].indexOf;
 
   fs = require('fs');
 
   path = require('path');
-
-  http = require('http');
-
-  closer = require('http-terminator');
 
   fastify = require('fastify');
 

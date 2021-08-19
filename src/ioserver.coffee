@@ -26,8 +26,6 @@
 # Add required packages
 fs       = require 'fs'
 path     = require 'path'
-http     = require 'http'
-closer   = require 'http-terminator'
 fastify  = require 'fastify'
 autoload = require 'fastify-autoload'
 

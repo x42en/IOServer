@@ -207,6 +207,9 @@
       if (!(manager || manager.prototype)) {
         throw "[!] Manager MUST be a function";
       }
+      if (this.manager_list[name] != null) {
+        throw "[!] Sorry this manager already exists";
+      }
       try {
         // Register manager with handle reference
         this._logify(7, `[*] Register manager ${name}`);
@@ -233,6 +236,9 @@
       }
       if (!(service && service.prototype)) {
         throw "[!] Service function is mandatory";
+      }
+      if (this.service_list[name] != null) {
+        throw "[!] Sorry this service already exists";
       }
       try {
         // Register service with handle reference
@@ -264,6 +270,9 @@
       }
       if (!(controller && controller.prototype)) {
         throw "[!] Controller function is mandatory";
+      }
+      if (this.controller_list[name] != null) {
+        throw "[!] Sorry this controller already exists";
       }
       if (!middlewares) {
         middlewares = [];

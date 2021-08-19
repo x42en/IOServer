@@ -44,7 +44,6 @@ jobs:
         uses: EndBug/version-check@v1
         id: check
         with:
-          diff-search: true
           file-url: https://unpkg.com/ioserver@latest/package.json
           static-checking: localIsNew
 

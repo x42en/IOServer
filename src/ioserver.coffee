@@ -168,6 +168,9 @@ module.exports = class IOServer
         if not (manager or manager.prototype)
             throw "[!] Manager MUST be a function"
         
+        if @manager_list[name]?
+            throw "[!] Sorry this manager already exists"
+        
         try
             # Register manager with handle reference
             @_logify 7, "[*] Register manager #{name}"
@@ -191,6 +194,9 @@ module.exports = class IOServer
         if not (service and service.prototype)
             throw "[!] Service function is mandatory"
         
+        if @service_list[name]?
+            throw "[!] Sorry this service already exists"
+
         try
             # Register service with handle reference
             @_logify 7, "[*] Register service #{name}"
@@ -215,6 +221,9 @@ module.exports = class IOServer
         
         if not (controller and controller.prototype)
             throw "[!] Controller function is mandatory"
+        
+        if @controller_list[name]?
+            throw "[!] Sorry this controller already exists"
         
         if not middlewares
             middlewares = []

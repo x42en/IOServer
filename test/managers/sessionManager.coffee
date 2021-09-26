@@ -5,6 +5,10 @@ module.exports = class SessionManager
     constructor: (@app) ->
         @sessions = { }
 
+    # List all existing sessions
+    list: ->
+        return @sessions
+
     # Allow creation of new session
     create: (sid) ->
         session_id = crypto.createHash('sha1').update(sid).digest('hex')

@@ -24,8 +24,11 @@ InteractService     = require "#{__dirname}/services/interactService"
 RegistrationService = require "#{__dirname}/services/registrationService"
 PrivateService      = require "#{__dirname}/services/privateService"
 
+# Import watchers
+SessionWatcher = require "#{__dirname}/watchers/sessionWatcher"
+
 # Import REST controllers
-HelloController = require "#{__dirname}/controllers/helloController"
+HelloController   = require "#{__dirname}/controllers/helloController"
 PrivateController = require "#{__dirname}/controllers/privateController"
 
 # Setup client vars
@@ -73,6 +76,11 @@ app.addService
         AccessMiddleware,
         PrivateMiddleware
     ]
+
+# Add a simple watcher
+app.addWatcher
+    name: 'sessions'
+    watcher: SessionWatcher
 
 # Add simple controller to test REST
 app.addController

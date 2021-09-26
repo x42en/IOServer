@@ -109,6 +109,7 @@
       this.service_list = {};
       this.manager_list = {};
       this.method_list = {};
+      this.watcher_list = {};
       this.controller_list = {};
       this.middleware_list = {};
       try {
@@ -189,30 +190,50 @@
       return klass[name] != null;
     }
 
-    addManager({name, manager}) {
+    _register_internal_class(type, name, klass) {
       var err;
       if (!name) {
-        throw "[!] Manager name is mandatory";
+        throw new Error("name is mandatory");
       }
-      if (name && name.length < 2) {
-        throw "[!] Manager name MUST be longer than 2 characters";
+      if ((type !== 'service') && name.length < 2) {
+        throw new Error("name MUST be longer than 2 characters");
       }
       if (indexOf.call(RESERVED_NAMES, name) >= 0) {
-        throw "[!] Sorry this is a reserved name";
+        throw new Error("Sorry this is a reserved name");
       }
-      if (!(manager || manager.prototype)) {
-        throw "[!] Manager MUST be a function";
+      if (!(klass && klass.prototype)) {
+        throw new Error("MUST be a function");
       }
-      if (this.manager_list[name] != null) {
-        throw "[!] Sorry this manager already exists";
+      if (this[`${type}_list`][name] != null) {
+        throw new Error(`Sorry this ${type} already exists`);
       }
       try {
-        // Register manager with handle reference
-        this._logify(7, `[*] Register manager ${name}`);
-        return this.manager_list[name] = new manager(this.appHandle);
+        // Register klass with handle reference
+        this._logify(7, `[*] Register ${type} ${name}`);
+        return this[`${type}_list`][name] = new klass(this.appHandle);
       } catch (error) {
         err = error;
-        return this._logify(3, `[!] Error while instantiate ${name} manager -> ${err}`);
+        throw new Error(err);
+      }
+    }
+
+    addWatcher({name, watcher}) {
+      var err;
+      try {
+        return this._register_internal_class('watcher', name, watcher);
+      } catch (error) {
+        err = error;
+        throw new Error(`[!] Error while instantiate ${name} watcher -> ${err}`);
+      }
+    }
+
+    addManager({name, manager}) {
+      var err;
+      try {
+        return this._register_internal_class('manager', name, manager);
+      } catch (error) {
+        err = error;
+        throw new Error(`[!] Error while instantiate ${name} manager -> ${err}`);
       }
     }
 
@@ -223,26 +244,12 @@
       // Allow global register for '/'
       if (!name) {
         name = '/';
-      // Otherwise service must comply certain rules
-      } else if (name.length < 2) {
-        throw "[!] Service name MUST be longer than 2 characters";
-      }
-      if (indexOf.call(RESERVED_NAMES, name) >= 0) {
-        throw "[!] Sorry this is a reserved name";
-      }
-      if (!(service && service.prototype)) {
-        throw "[!] Service function is mandatory";
-      }
-      if (this.service_list[name] != null) {
-        throw "[!] Sorry this service already exists";
       }
       try {
-        // Register service with handle reference
-        this._logify(7, `[*] Register service ${name}`);
-        this.service_list[name] = new service(this.appHandle);
+        this._register_internal_class('service', name, service);
       } catch (error) {
         err = error;
-        this._logify(3, `[!] Error while instantiate ${name} service -> ${err}`);
+        throw new Error(`[!] Error while instantiate ${name} service -> ${err}`);
       }
       // list methods of object... it will be the list of io actions
       this.method_list[name] = this._dumpMethods(service);
@@ -255,21 +262,6 @@
     // this method should be called automatically when fastify is started
     addController({name, controller, middlewares, prefix}) {
       var controller_routes, entry, err, j, len, len1, len2, mdwr, middleware, n, o, option, ref, results;
-      if (!name) {
-        throw "[!] Controller name is mandatory";
-      }
-      if (name.length < 2) {
-        throw "[!] Controller name MUST be longer than 2 characters";
-      }
-      if (indexOf.call(RESERVED_NAMES, name) >= 0) {
-        throw "[!] Sorry this is a reserved name";
-      }
-      if (!(controller && controller.prototype)) {
-        throw "[!] Controller function is mandatory";
-      }
-      if (this.controller_list[name] != null) {
-        throw "[!] Sorry this controller already exists";
-      }
       if (!middlewares) {
         middlewares = [];
       }
@@ -282,15 +274,13 @@
         prefix = prefix.slice(0, -1);
       }
       try {
-        // Register controller with handle reference
-        this._logify(7, `[*] Register controller ${name}`);
-        this.controller_list[name] = new controller(this.appHandle);
+        this._register_internal_class('controller', name, controller);
       } catch (error) {
         err = error;
-        this._logify(3, `[!] Error while instanciate ${name} controller -> ${err}`);
+        throw new Error(`[!] Error while instantiate ${name} controller -> ${err}`);
       }
       if (!fs.existsSync(`${this._routes}/${name}.json`)) {
-        throw `[!] Predicted routes file does not exists: ${this._routes}/${name}.json`;
+        throw new Error(`[!] Predicted routes file does not exists: ${this._routes}/${name}.json`);
       }
       // Load defined routes
       controller_routes = require(`${this._routes}/${name}.json`);
@@ -343,7 +333,7 @@
     // Launch socket IO and get ready to handle events on connection
     // Pass web server used for connections
     async start() {
-      var d, day, err, hours, manager, manager_name, minutes, month, ns, ref, seconds;
+      var d, day, err, hours, manager, manager_name, minutes, month, ns, ref, ref1, seconds, watcher, watcher_name;
       d = new Date();
       day = d.getDate() < 10 ? `0${d.getDate()}` : d.getDate();
       month = d.getMonth() < 10 ? `0${d.getMonth()}` : d.getMonth();
@@ -357,22 +347,35 @@
       // Register all managers
       for (manager_name in ref) {
         manager = ref[manager_name];
-        this._logify(6, `[*] register ${manager_name} manager`);
+        this._logify(6, `[*] Register ${manager_name} manager`);
         this.appHandle[manager_name] = manager;
+      }
+      ref1 = this.watcher_list;
+      
+      // Start all watchers
+      for (watcher_name in ref1) {
+        watcher = ref1[watcher_name];
+        this._logify(6, `[*] Start watcher ${watcher_name}`);
+        try {
+          watcher.watch();
+        } catch (error) {
+          err = error;
+          throw new Error(`Unable to start watch method of watcher ${watcher_name}`);
+        }
       }
       // Once webapp is ready
       this._webapp.ready((err) => {
-        var j, len, mdwr, middleware, ref1, ref2, results, service, service_name;
-        ref1 = this.service_list;
+        var j, len, mdwr, middleware, ref2, ref3, results, service, service_name;
+        ref2 = this.service_list;
         // Register each different services by its namespace
         results = [];
-        for (service_name in ref1) {
-          service = ref1[service_name];
+        for (service_name in ref2) {
+          service = ref2[service_name];
           ns[service_name] = service_name === '/' ? this._webapp.io.of('/') : this._webapp.io.of(`/${service_name}`);
-          ref2 = this.middleware_list[service_name];
+          ref3 = this.middleware_list[service_name];
           // Register middleware for namespace 
-          for (j = 0, len = ref2.length; j < len; j++) {
-            middleware = ref2[j];
+          for (j = 0, len = ref3.length; j < len; j++) {
+            middleware = ref3[j];
             mdwr = new middleware();
             ns[service_name].use(mdwr.handle(this.appHandle));
           }

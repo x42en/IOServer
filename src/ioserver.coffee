@@ -81,9 +81,10 @@ module.exports = class IOServer
             _cors.origin = ["https://#{@host}","http://#{@host}"]
             
         # Setup internal lists
-        @service_list    = {}
-        @manager_list    = {}
-        @method_list     = {}
+        @service_list = {}
+        @manager_list = {}
+        @method_list  = {}
+        @watcher_list = {}
         
         @controller_list = {}
         @middleware_list = {}
@@ -154,27 +155,40 @@ module.exports = class IOServer
     
     _method_exists: (klass, name) ->
         return klass[name]?
-
-    addManager: ({name, manager}) ->
+    
+    _register_internal_class: (type, name, klass) ->
         if not name
-            throw "[!] Manager name is mandatory"
-        if name and name.length < 2
-            throw "[!] Manager name MUST be longer than 2 characters"
+            throw new Error "name is mandatory"
+        if (type isnt 'service') and name.length < 2
+            throw new Error "name MUST be longer than 2 characters"
         if name in RESERVED_NAMES
-            throw "[!] Sorry this is a reserved name"
+            throw new Error "Sorry this is a reserved name"
         
-        if not (manager or manager.prototype)
-            throw "[!] Manager MUST be a function"
+        if not (klass and klass.prototype)
+            throw new Error "MUST be a function"
         
-        if @manager_list[name]?
-            throw "[!] Sorry this manager already exists"
+        if @["#{type}_list"][name]?
+            throw new Error "Sorry this #{type} already exists"
         
         try
-            # Register manager with handle reference
-            @_logify 7, "[*] Register manager #{name}"
-            @manager_list[name] = new manager(@appHandle)
+            # Register klass with handle reference
+            @_logify 7, "[*] Register #{type} #{name}"
+            @["#{type}_list"][name] = new klass(@appHandle)
         catch err
-            @_logify 3, "[!] Error while instantiate #{name} manager -> #{err}"
+            throw new Error err
+
+    
+    addWatcher: ({name, watcher}) ->
+        try
+            @_register_internal_class 'watcher', name, watcher
+        catch err
+            throw new Error "[!] Error while instantiate #{name} watcher -> #{err}"
+
+    addManager: ({name, manager}) ->
+        try
+            @_register_internal_class 'manager', name, manager
+        catch err
+            throw new Error "[!] Error while instantiate #{name} manager -> #{err}"
 
     # Allow to register easily a class to this server
     # this class will be bind to a specific namespace
@@ -182,25 +196,10 @@ module.exports = class IOServer
         # Allow global register for '/'
         if not name
             name = '/'
-        # Otherwise service must comply certain rules
-        else if name.length < 2
-            throw "[!] Service name MUST be longer than 2 characters"
-        
-        if name in RESERVED_NAMES
-            throw "[!] Sorry this is a reserved name"
-        
-        if not (service and service.prototype)
-            throw "[!] Service function is mandatory"
-        
-        if @service_list[name]?
-            throw "[!] Sorry this service already exists"
-
         try
-            # Register service with handle reference
-            @_logify 7, "[*] Register service #{name}"
-            @service_list[name] = new service(@appHandle)
+            @_register_internal_class 'service', name, service
         catch err
-            @_logify 3, "[!] Error while instantiate #{name} service -> #{err}"
+            throw new Error "[!] Error while instantiate #{name} service -> #{err}"
 
         # list methods of object... it will be the list of io actions
         @method_list[name] = @_dumpMethods service
@@ -210,19 +209,6 @@ module.exports = class IOServer
     # Allow to register easily controllers for REST API
     # this method should be called automatically when fastify is started
     addController: ({name, controller, middlewares, prefix}) ->
-        if not name
-            throw "[!] Controller name is mandatory"
-        if name.length < 2
-            throw "[!] Controller name MUST be longer than 2 characters"
-        if name in RESERVED_NAMES
-            throw "[!] Sorry this is a reserved name"
-        
-        if not (controller and controller.prototype)
-            throw "[!] Controller function is mandatory"
-        
-        if @controller_list[name]?
-            throw "[!] Sorry this controller already exists"
-        
         if not middlewares
             middlewares = []
         
@@ -234,14 +220,12 @@ module.exports = class IOServer
             prefix = prefix.slice(0, -1)
         
         try
-            # Register controller with handle reference
-            @_logify 7, "[*] Register controller #{name}"
-            @controller_list[name] = new controller(@appHandle)
+            @_register_internal_class 'controller', name, controller
         catch err
-            @_logify 3, "[!] Error while instanciate #{name} controller -> #{err}"
-
+            throw new Error "[!] Error while instantiate #{name} controller -> #{err}"
+        
         if not fs.existsSync("#{@_routes}/#{name}.json")
-            throw "[!] Predicted routes file does not exists: #{@_routes}/#{name}.json"
+            throw new Error "[!] Predicted routes file does not exists: #{@_routes}/#{name}.json"
 
         # Load defined routes
         controller_routes = require "#{@_routes}/#{name}.json"
@@ -294,8 +278,16 @@ module.exports = class IOServer
 
         # Register all managers
         for manager_name, manager of @manager_list
-            @_logify 6, "[*] register #{manager_name} manager"
+            @_logify 6, "[*] Register #{manager_name} manager"
             @appHandle[manager_name] = manager
+        
+        # Start all watchers
+        for watcher_name, watcher of @watcher_list
+            @_logify 6, "[*] Start watcher #{watcher_name}"
+            try
+                watcher.watch()
+            catch err
+                throw new Error "Unable to start watch method of watcher #{watcher_name}"
 
         # Once webapp is ready
         @_webapp.ready (err) =>

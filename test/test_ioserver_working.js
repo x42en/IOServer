@@ -1,6 +1,6 @@
 (function() {
   // During the test the env variable is set to test
-  var AccessMiddleware, HOST, HelloController, IOServer, IOServerError, InteractService, PORT, PrivateController, PrivateMiddleware, PrivateService, RegistrationService, RestMiddleware, SessionManager, StandardService, app, chai, chaiHttp, end_point, opts, path, should, socketio_client;
+  var AccessMiddleware, HOST, HelloController, IOServer, IOServerError, InteractService, PORT, PrivateController, PrivateMiddleware, PrivateService, RegistrationService, RestMiddleware, SessionManager, SessionWatcher, StandardService, app, chai, chaiHttp, end_point, opts, path, should, socketio_client;
 
   process.env.NODE_ENV = 'test';
 
@@ -38,6 +38,9 @@
   RegistrationService = require(`${__dirname}/services/registrationService`);
 
   PrivateService = require(`${__dirname}/services/privateService`);
+
+  // Import watchers
+  SessionWatcher = require(`${__dirname}/watchers/sessionWatcher`);
 
   // Import REST controllers
   HelloController = require(`${__dirname}/controllers/helloController`);
@@ -93,6 +96,12 @@
     name: 'private',
     service: PrivateService,
     middlewares: [AccessMiddleware, PrivateMiddleware]
+  });
+
+  // Add a simple watcher
+  app.addWatcher({
+    name: 'sessions',
+    watcher: SessionWatcher
   });
 
   // Add simple controller to test REST

@@ -54,6 +54,13 @@ Add services using:
       service:   ServiceClass
   ```
 
+Add watchers using:
+  ```coffeescript
+    app.addWatcher
+      name:      'watcher_name'
+      watcher:   WatcherClass
+  ```
+
 Add controller using:
   ```coffeescript
     app.addController
@@ -121,6 +128,13 @@ You can add controller with Middlewares and routes prefix:
       middlewares: [
         RESTMiddleware
       ]
+  ```
+
+You cann add watchers class that will be launched at start using watch() method
+  ```coffeescript
+    app.addWatcher
+      name:      'watcher_name'
+      watcher:   WatcherClass
   ```
 
 In order to meet the fastify requirements, some pre-requised are needed to setup REST endpoints.

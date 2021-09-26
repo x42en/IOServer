@@ -10,6 +10,11 @@
       this.sessions = {};
     }
 
+    // List all existing sessions
+    list() {
+      return this.sessions;
+    }
+
     // Allow creation of new session
     create(sid) {
       var session_id;

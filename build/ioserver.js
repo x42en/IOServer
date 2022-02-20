@@ -118,7 +118,7 @@
         });
       } catch (error1) {
         err = error1;
-        throw `[!] Unable to instanciate server: ${err}`;
+        throw new Error(`[!] Unable to instanciate server: ${err}`);
       }
       try {
         // Register standard HTTP error shortcuts
@@ -127,7 +127,7 @@
         });
       } catch (error1) {
         err = error1;
-        throw `[!] Unable to register sensible plugin: ${err}`;
+        throw new Error(`[!] Unable to register sensible plugin: ${err}`);
       }
       try {
         // Allow developper to use throw Error directly in methods
@@ -149,14 +149,14 @@
         });
       } catch (error1) {
         err = error1;
-        throw `[!] Unable to register error handler: ${err}`;
+        throw new Error(`[!] Unable to register error handler: ${err}`);
       }
       try {
         // Register standard HTTP error shortcuts
         this._webapp.register(require('fastify-cors'), _cors);
       } catch (error1) {
         err = error1;
-        throw `[!] Unable to register CORS plugin: ${err}`;
+        throw new Error(`[!] Unable to register CORS plugin: ${err}`);
       }
       try {
         // Register socket.io listener
@@ -167,7 +167,7 @@
         });
       } catch (error1) {
         err = error1;
-        throw `[!] Unable to register socket.io plugin: ${err}`;
+        throw new Error(`[!] Unable to register socket.io plugin: ${err}`);
       }
       // Register the global app handle
       // that will be passed to all entities
@@ -380,22 +380,20 @@
           watcher.watch();
         } catch (error1) {
           err = error1;
-          throw new Error(`Unable to start watch method of watcher ${watcher_name}`);
+          throw new Error(`Unable to start watch method of watcher ${watcher_name}: ${err}`);
         }
       }
       // Once webapp is ready
       this._webapp.ready((err) => {
-        var j, len, mdwr, middleware, ref2, ref3, results, service, service_name;
-        ref2 = this.service_list;
-        // Register each different services by its namespace
+        var j, len, mdwr, middleware, ref2, results, service_name;
+// Register each different services by its namespace
         results = [];
-        for (service_name in ref2) {
-          service = ref2[service_name];
+        for (service_name in this.service_list) {
           ns[service_name] = service_name === '/' ? this._webapp.io.of('/') : this._webapp.io.of(`/${service_name}`);
-          ref3 = this.middleware_list[service_name];
+          ref2 = this.middleware_list[service_name];
           // Register middleware for namespace 
-          for (j = 0, len = ref3.length; j < len; j++) {
-            middleware = ref3[j];
+          for (j = 0, len = ref2.length; j < len; j++) {
+            middleware = ref2[j];
             mdwr = new middleware();
             ns[service_name].use(mdwr.handle(this.appHandle));
           }
@@ -420,7 +418,7 @@
     stop() {
       var err;
       try {
-        return this._webapp.close(function() {
+        return this._webapp.close(() => {
           return this._logify(6, "[*] Server stopped");
         });
       } catch (error1) {

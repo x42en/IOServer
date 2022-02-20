@@ -25,7 +25,7 @@
   // limitations under the License.
 
   // Add required packages
-  var HOST, IOServer, IOServerError, LOG_LEVEL, PORT, RESERVED_NAMES, REST, TRANSPORTS, VERSION, autoload, fastify, fs, path, sensible,
+  var HOST, IOServer, IOServerError, LOG_LEVEL, PORT, RESERVED_NAMES, TRANSPORTS, VERSION, fastify, fs, path,
     indexOf = [].indexOf;
 
   fs = require('fs');
@@ -34,14 +34,8 @@
 
   fastify = require('fastify');
 
-  sensible = require('fastify-sensible');
-
-  autoload = require('fastify-autoload');
-
   // Set global vars
   VERSION = '1.2.9';
-
-  REST = false;
 
   PORT = 8080;
 
@@ -128,7 +122,7 @@
       }
       try {
         // Register standard HTTP error shortcuts
-        this._webapp.register(sensible, {
+        this._webapp.register(require('fastify-sensible'), {
           errorHandler: false
         });
       } catch (error1) {

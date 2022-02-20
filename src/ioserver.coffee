@@ -27,12 +27,9 @@
 fs       = require 'fs'
 path     = require 'path'
 fastify  = require 'fastify'
-sensible = require 'fastify-sensible'
-autoload = require 'fastify-autoload'
 
 # Set global vars
 VERSION    = '1.2.9'
-REST       = false
 PORT       = 8080
 HOST       = 'localhost'
 LOG_LEVEL  = ['EMERGENCY','ALERT','CRITICAL','ERROR','WARNING','NOTIFICATION','INFORMATION','DEBUG']
@@ -103,7 +100,7 @@ module.exports = class IOServer
         
         try
             # Register standard HTTP error shortcuts
-            @_webapp.register(sensible, { errorHandler: false })
+            @_webapp.register(require('fastify-sensible'), { errorHandler: false })
         catch err
             throw "[!] Unable to register sensible plugin: #{err}"
         

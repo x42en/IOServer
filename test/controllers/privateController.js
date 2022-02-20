@@ -3,6 +3,7 @@
 
   module.exports = PrivateController = class PrivateController {
     constructor(app) {
+      this.restricted = this.restricted.bind(this);
       this.app = app;
     }
 

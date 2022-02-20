@@ -1,6 +1,6 @@
 (function() {
   //###################################################
-  //         IOServer - v1.2.8                        #
+  //         IOServer - v1.2.9                        #
   //                                                  #
   //         Damn simple socket.io server             #
   //###################################################
@@ -25,7 +25,7 @@
   // limitations under the License.
 
   // Add required packages
-  var HOST, IOServer, IOServerError, LOG_LEVEL, PORT, RESERVED_NAMES, REST, TRANSPORTS, VERSION, autoload, fastify, fs, path,
+  var HOST, IOServer, IOServerError, LOG_LEVEL, PORT, RESERVED_NAMES, REST, TRANSPORTS, VERSION, autoload, fastify, fs, path, sensible,
     indexOf = [].indexOf;
 
   fs = require('fs');
@@ -34,10 +34,12 @@
 
   fastify = require('fastify');
 
+  sensible = require('fastify-sensible');
+
   autoload = require('fastify-autoload');
 
   // Set global vars
-  VERSION = '1.2.8';
+  VERSION = '1.2.9';
 
   REST = false;
 
@@ -68,8 +70,8 @@
         if (this.port > 65535) {
           throw new Error('Invalid port');
         }
-      } catch (error) {
-        err = error;
+      } catch (error1) {
+        err = error1;
         throw new Error(err);
       }
       _cookie = Boolean(cookie) ? Boolean(cookie) : false;
@@ -120,22 +122,46 @@
           maxParamLength: 200,
           caseSensitive: true
         });
-      } catch (error) {
-        err = error;
+      } catch (error1) {
+        err = error1;
         throw `[!] Unable to instanciate server: ${err}`;
       }
       try {
         // Register standard HTTP error shortcuts
-        this._webapp.register(require('fastify-sensible'));
-      } catch (error) {
-        err = error;
+        this._webapp.register(sensible, {
+          errorHandler: false
+        });
+      } catch (error1) {
+        err = error1;
         throw `[!] Unable to register sensible plugin: ${err}`;
+      }
+      try {
+        // Allow developper to use throw Error directly in methods
+        this._webapp.setErrorHandler(function(error, req, reply) {
+          var code;
+          // Handle IOServerError
+          if (error instanceof IOServerError) {
+            code = error.getCode() < 0 ? 500 : error.getCode();
+            return reply.status(code).send(error);
+          // Handle HTTPErrors
+          } else if ((error.status != null)) {
+            return reply.status(error.status).send({
+              message: error.message
+            });
+          } else {
+            // Handle standard Error
+            return reply.status(500).send(error.message);
+          }
+        });
+      } catch (error1) {
+        err = error1;
+        throw `[!] Unable to register error handler: ${err}`;
       }
       try {
         // Register standard HTTP error shortcuts
         this._webapp.register(require('fastify-cors'), _cors);
-      } catch (error) {
-        err = error;
+      } catch (error1) {
+        err = error1;
         throw `[!] Unable to register CORS plugin: ${err}`;
       }
       try {
@@ -145,8 +171,8 @@
           cookie: _cookie,
           cors: _cors
         });
-      } catch (error) {
-        err = error;
+      } catch (error1) {
+        err = error1;
         throw `[!] Unable to register socket.io plugin: ${err}`;
       }
       // Register the global app handle
@@ -211,8 +237,8 @@
         // Register klass with handle reference
         this._logify(7, `[*] Register ${type} ${name}`);
         return this[`${type}_list`][name] = new klass(this.appHandle);
-      } catch (error) {
-        err = error;
+      } catch (error1) {
+        err = error1;
         throw new Error(err);
       }
     }
@@ -221,8 +247,8 @@
       var err;
       try {
         return this._register_internal_class('watcher', name, watcher);
-      } catch (error) {
-        err = error;
+      } catch (error1) {
+        err = error1;
         throw new Error(`[!] Error while instantiate ${name} watcher -> ${err}`);
       }
     }
@@ -231,8 +257,8 @@
       var err;
       try {
         return this._register_internal_class('manager', name, manager);
-      } catch (error) {
-        err = error;
+      } catch (error1) {
+        err = error1;
         throw new Error(`[!] Error while instantiate ${name} manager -> ${err}`);
       }
     }
@@ -247,8 +273,8 @@
       }
       try {
         this._register_internal_class('service', name, service);
-      } catch (error) {
-        err = error;
+      } catch (error1) {
+        err = error1;
         throw new Error(`[!] Error while instantiate ${name} service -> ${err}`);
       }
       // list methods of object... it will be the list of io actions
@@ -275,8 +301,8 @@
       }
       try {
         this._register_internal_class('controller', name, controller);
-      } catch (error) {
-        err = error;
+      } catch (error1) {
+        err = error1;
         throw new Error(`[!] Error while instantiate ${name} controller -> ${err}`);
       }
       if (!fs.existsSync(`${this._routes}/${name}.json`)) {
@@ -293,7 +319,7 @@
         for (n = 0, len1 = ref.length; n < len1; n++) {
           option = ref[n];
           // Avoid override undefined keys
-          if (!entry[option]) {
+          if (entry[option] == null) {
             continue;
           }
           // Adapt object using current controller name
@@ -317,8 +343,8 @@
         try {
           this._logify(7, `[*] Register controller route ${entry.method} ${entry.url}`);
           results.push(this._webapp.route(entry));
-        } catch (error) {
-          err = error;
+        } catch (error1) {
+          err = error1;
           results.push(this._logify(3, `[!] Unable to register route entry: ${err}`));
         }
       }
@@ -358,8 +384,8 @@
         this._logify(6, `[*] Start watcher ${watcher_name}`);
         try {
           watcher.watch();
-        } catch (error) {
-          err = error;
+        } catch (error1) {
+          err = error1;
           throw new Error(`Unable to start watch method of watcher ${watcher_name}`);
         }
       }
@@ -389,8 +415,8 @@
         // Start web server
         this._logify(5, `[*] Starting server on https://${this.host}:${this.port} ...`);
         return (await this._webapp.listen(this.port, this.host));
-      } catch (error) {
-        err = error;
+      } catch (error1) {
+        err = error1;
         return this._logify(3, `[!] Unable to start server: ${err}`);
       }
     }
@@ -403,8 +429,8 @@
         return this._webapp.close(function() {
           return this._logify(6, "[*] Server stopped");
         });
-      } catch (error) {
-        err = error;
+      } catch (error1) {
+        err = error1;
         throw new Error(`[!] Unable to stop server: ${err}`);
       }
     }
@@ -461,8 +487,8 @@
           try {
             await this.service_list[service][method](socket, data, callback);
             return resolve();
-          } catch (error) {
-            err = error;
+          } catch (error1) {
+            err = error1;
             return reject(err);
           }
         }).catch((err) => {

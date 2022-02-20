@@ -1,5 +1,5 @@
 ####################################################
-#         IOServer - v1.2.8                        #
+#         IOServer - v1.2.9                        #
 #                                                  #
 #         Damn simple socket.io server             #
 ####################################################
@@ -27,10 +27,11 @@
 fs       = require 'fs'
 path     = require 'path'
 fastify  = require 'fastify'
+sensible = require 'fastify-sensible'
 autoload = require 'fastify-autoload'
 
 # Set global vars
-VERSION    = '1.2.8'
+VERSION    = '1.2.9'
 REST       = false
 PORT       = 8080
 HOST       = 'localhost'
@@ -102,9 +103,25 @@ module.exports = class IOServer
         
         try
             # Register standard HTTP error shortcuts
-            @_webapp.register(require('fastify-sensible'))
+            @_webapp.register(sensible, { errorHandler: false })
         catch err
             throw "[!] Unable to register sensible plugin: #{err}"
+        
+        try
+            # Allow developper to use throw Error directly in methods
+            @_webapp.setErrorHandler (error, req, reply) ->
+                # Handle IOServerError
+                if (error instanceof IOServerError)
+                    code = if error.getCode() < 0 then 500 else error.getCode()
+                    reply.status(code).send(error)
+                # Handle HTTPErrors
+                else if (error.status?)
+                    reply.status(error.status).send({message: error.message})
+                # Handle standard Error
+                else
+                    reply.status(500).send(error.message)
+        catch err
+            throw "[!] Unable to register error handler: #{err}"
         
         try
             # Register standard HTTP error shortcuts
@@ -236,7 +253,7 @@ module.exports = class IOServer
             # Auto load function or array of function for fastify routes options
             for option in ['onRequest', 'preParsing', 'preValidation', 'preHandler', 'preSerialization', 'onSend', 'onResponse', 'handler', 'errorHandler']
                 # Avoid override undefined keys
-                if not entry[option]
+                if not entry[option]?
                     continue
                 # Adapt object using current controller name
                 if @controller_list[name][entry[option]]?

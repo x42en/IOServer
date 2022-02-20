@@ -385,15 +385,17 @@
       }
       // Once webapp is ready
       this._webapp.ready((err) => {
-        var j, len, mdwr, middleware, ref2, results, service_name;
-// Register each different services by its namespace
+        var j, len, mdwr, middleware, ref2, ref3, results, service, service_name;
+        ref2 = this.service_list;
+        // Register each different services by its namespace
         results = [];
-        for (service_name in this.service_list) {
+        for (service_name in ref2) {
+          service = ref2[service_name];
           ns[service_name] = service_name === '/' ? this._webapp.io.of('/') : this._webapp.io.of(`/${service_name}`);
-          ref2 = this.middleware_list[service_name];
+          ref3 = this.middleware_list[service_name];
           // Register middleware for namespace 
-          for (j = 0, len = ref2.length; j < len; j++) {
-            middleware = ref2[j];
+          for (j = 0, len = ref3.length; j < len; j++) {
+            middleware = ref3[j];
             mdwr = new middleware();
             ns[service_name].use(mdwr.handle(this.appHandle));
           }

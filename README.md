@@ -17,12 +17,6 @@ The socket.io's registrated methods will then be accessible as standard client-s
   socket.emit 'method_name', data
 ```
 
-**Warning: Version 1.2.x removed embedded HTTP(S) server and then changed constructor arguments !!**  
-
-**Warning: Version 1.1.x changed 'interact' method to 'sendTo', and rename its arguments:**  
-**- service -> namespace**  
-**- method -> event**  
-
 ## Install
 
 Install with npm:

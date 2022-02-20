@@ -13,4 +13,4 @@ module.exports = class AccessMiddleware
     
     _checkSessionAuthentified: (sid) ->
         if not @app.sessions.is_auth sid
-            throw 'User is not authentified'
+            throw new Error 'User is not authentified'

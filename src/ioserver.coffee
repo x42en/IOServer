@@ -1,5 +1,5 @@
 ####################################################
-#         IOServer - v1.2.8                        #
+#         IOServer - v1.2.10                        #
 #                                                  #
 #         Damn simple socket.io server             #
 ####################################################
@@ -27,11 +27,9 @@
 fs       = require 'fs'
 path     = require 'path'
 fastify  = require 'fastify'
-autoload = require 'fastify-autoload'
 
 # Set global vars
-VERSION    = '1.2.8'
-REST       = false
+VERSION    = '1.2.10'
 PORT       = 8080
 HOST       = 'localhost'
 LOG_LEVEL  = ['EMERGENCY','ALERT','CRITICAL','ERROR','WARNING','NOTIFICATION','INFORMATION','DEBUG']
@@ -98,19 +96,35 @@ module.exports = class IOServer
                     caseSensitive: true
                 })
         catch err
-            throw "[!] Unable to instanciate server: #{err}"
+            throw new Error "[!] Unable to instanciate server: #{err}"
         
         try
             # Register standard HTTP error shortcuts
-            @_webapp.register(require('fastify-sensible'))
+            @_webapp.register(require('fastify-sensible'), { errorHandler: false })
         catch err
-            throw "[!] Unable to register sensible plugin: #{err}"
+            throw new Error "[!] Unable to register sensible plugin: #{err}"
+        
+        try
+            # Allow developper to use throw Error directly in methods
+            @_webapp.setErrorHandler (error, req, reply) ->
+                # Handle IOServerError
+                if (error instanceof IOServerError)
+                    code = if error.getCode() < 0 then 500 else error.getCode()
+                    reply.status(code).send(error)
+                # Handle HTTPErrors
+                else if (error.status?)
+                    reply.status(error.status).send({message: error.message})
+                # Handle standard Error
+                else
+                    reply.status(500).send(error.message)
+        catch err
+            throw new Error "[!] Unable to register error handler: #{err}"
         
         try
             # Register standard HTTP error shortcuts
             @_webapp.register(require('fastify-cors'), _cors)
         catch err
-            throw "[!] Unable to register CORS plugin: #{err}"
+            throw new Error "[!] Unable to register CORS plugin: #{err}"
         
         try
             # Register socket.io listener
@@ -120,7 +134,7 @@ module.exports = class IOServer
                 cors: _cors
             })
         catch err
-            throw "[!] Unable to register socket.io plugin: #{err}"
+            throw new Error "[!] Unable to register socket.io plugin: #{err}"
 
         # Register the global app handle
         # that will be passed to all entities
@@ -236,7 +250,7 @@ module.exports = class IOServer
             # Auto load function or array of function for fastify routes options
             for option in ['onRequest', 'preParsing', 'preValidation', 'preHandler', 'preSerialization', 'onSend', 'onResponse', 'handler', 'errorHandler']
                 # Avoid override undefined keys
-                if not entry[option]
+                if not entry[option]?
                     continue
                 # Adapt object using current controller name
                 if @controller_list[name][entry[option]]?
@@ -287,12 +301,12 @@ module.exports = class IOServer
             try
                 watcher.watch()
             catch err
-                throw new Error "Unable to start watch method of watcher #{watcher_name}"
+                throw new Error "Unable to start watch method of watcher #{watcher_name}: #{err}"
 
         # Once webapp is ready
         @_webapp.ready (err) =>
             # Register each different services by its namespace
-            for service_name, service of @service_list
+            for service_name of @service_list
                 ns[service_name] = if service_name is '/' then @_webapp.io.of '/' else @_webapp.io.of "/#{service_name}"
 
                 # Register middleware for namespace 
@@ -314,7 +328,7 @@ module.exports = class IOServer
     # Force server stop
     stop: ->
         try
-            @_webapp.close () ->
+            @_webapp.close () =>
                 @_logify 6, "[*] Server stopped"
         catch err
             throw new Error "[!] Unable to stop server: #{err}"

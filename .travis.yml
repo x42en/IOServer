@@ -5,8 +5,7 @@ dist:
   - bionic
   - focal
 node_js:
-  - '10'
-  - '12'
-  - '14'
+  - "12"
+  - "14"
 git:
   depth: 1

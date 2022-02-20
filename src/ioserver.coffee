@@ -306,7 +306,7 @@ module.exports = class IOServer
         # Once webapp is ready
         @_webapp.ready (err) =>
             # Register each different services by its namespace
-            for service_name, service of @service_list
+            for service_name of @service_list
                 ns[service_name] = if service_name is '/' then @_webapp.io.of '/' else @_webapp.io.of "/#{service_name}"
 
                 # Register middleware for namespace 

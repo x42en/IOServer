@@ -1,6 +1,6 @@
 (function() {
   //###################################################
-  //         IOServer - v1.3.1                        #
+  //         IOServer - v1.3.2                        #
   //                                                  #
   //         Damn simple socket.io server             #
   //###################################################
@@ -35,7 +35,7 @@
   fastify = require('fastify');
 
   // Set global vars
-  VERSION = '1.3.1';
+  VERSION = '1.3.2';
 
   PORT = 8080;
 
@@ -429,22 +429,26 @@
       }
     }
 
-    sendTo({namespace, event, data, room = false, sid = false} = {}) {
+    sendTo({namespace, event, data, room = null, sid = null} = {}) {
       var ns, sockets;
-      // Auto correct namespace
-      if (!namespace.startsWith('/')) {
-        namespace = `/${namespace}`;
+      if (namespace != null) {
+        // Auto correct namespace
+        if (!namespace.startsWith('/')) {
+          namespace = `/${namespace}`;
+        }
+        
+        // Search for namespace object
+        ns = this._webapp.io.of(namespace);
+      } else {
+        ns = this._webapp.io.of('/');
       }
       
-      // Search for namespace object
-      ns = this._webapp.io.of(namespace || "/");
-      
       // Send event to specific sid if set
-      if ((sid != null) && sid) {
+      if (sid != null) {
         ns.sockets.get(sid).emit(event, data);
       } else {
         // Restrict access to clients in room if set
-        sockets = (room != null) && room ? ns.in(room) : ns;
+        sockets = room != null ? ns.in(room) : ns;
         sockets.emit(event, data);
       }
       return true;

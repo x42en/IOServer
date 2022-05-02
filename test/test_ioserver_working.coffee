@@ -191,7 +191,7 @@ describe "IOServer simple HTTP working tests", ->
     
     it 'Check interact event from external source to global', (done) ->
         socket_client = socketio_client(end_point, opts)
-        socket_client.once 'external test', (data) ->
+        socket_client.once 'external test global', (data) ->
             data.should.be.an 'object'
             data.should.have.deep.property 'status'
             data.should.have.deep.property 'msg'
@@ -205,13 +205,13 @@ describe "IOServer simple HTTP working tests", ->
         # Give some times for socket to setup
         setTimeout( ->
             app.sendTo
-                event: 'external test'
+                event: 'external test global'
                 data: { status: 'ok', msg: 'Sent event to global from external' }
-        , 20)
+        , 50)
     
     it 'Check interact event from external source to namespace', (done) ->
         socket_client = socketio_client("#{end_point}/interact", opts)
-        socket_client.once 'external test', (data) ->
+        socket_client.once 'external test namespace', (data) ->
             data.should.be.an 'object'
             data.should.have.deep.property 'status'
             data.should.have.deep.property 'msg'
@@ -226,15 +226,15 @@ describe "IOServer simple HTTP working tests", ->
         setTimeout( ->
             app.sendTo
                 namespace: '/interact'
-                event: 'external test'
+                event: 'external test namespace'
                 data: { status: 'ok', msg: 'Sent event to /interact from external' }
-        , 20)
+        , 50)
     
     it 'Check interact event from external source to socket in room', (done) ->
         socket_client = socketio_client("#{end_point}/interact", opts)
         # Join room test
         socket_client.emit 'restricted'
-        socket_client.once 'external test', (data) ->
+        socket_client.once 'external test room', (data) ->
             data.should.be.an 'object'
             data.should.have.deep.property 'status'
             data.should.have.deep.property 'msg'
@@ -250,13 +250,13 @@ describe "IOServer simple HTTP working tests", ->
             app.sendTo
                 namespace: '/interact'
                 room: 'test'
-                event: 'external test'
+                event: 'external test room'
                 data: { status: 'ok', msg: 'Sent event to /interact room test from external' }
-        , 20)
+        , 50)
     
     it 'Check interact event from external source to socket ID ', (done) ->
         socket_client = socketio_client("#{end_point}/interact", opts)
-        socket_client.once 'external test', (data) ->
+        socket_client.once 'external test sid', (data) ->
             data.should.be.an 'object'
             data.should.have.deep.property 'status'
             data.should.have.deep.property 'msg'
@@ -272,9 +272,9 @@ describe "IOServer simple HTTP working tests", ->
             app.sendTo
                 namespace: '/interact'
                 sid: socket_client.id
-                event: 'external test'
+                event: 'external test sid'
                 data: { status: 'ok', msg: 'Sent event to socket.id from external' }
-        , 20)
+        , 50)
     
     it 'Check registration method', (done) ->
         socket_client = socketio_client("#{end_point}/registration", opts)

@@ -1,6 +1,6 @@
 (function() {
   //###################################################
-  //         IOServer - v1.3.0                        #
+  //         IOServer - v1.3.2                        #
   //                                                  #
   //         Damn simple socket.io server             #
   //###################################################
@@ -35,7 +35,7 @@
   fastify = require('fastify');
 
   // Set global vars
-  VERSION = '1.3.0';
+  VERSION = '1.3.2';
 
   PORT = 8080;
 
@@ -370,30 +370,18 @@
         this._logify(6, `[*] Register ${manager_name} manager`);
         this.appHandle[manager_name] = manager;
       }
-      ref1 = this.watcher_list;
       
-      // Start all watchers
-      for (watcher_name in ref1) {
-        watcher = ref1[watcher_name];
-        this._logify(6, `[*] Start watcher ${watcher_name}`);
-        try {
-          watcher.watch();
-        } catch (error1) {
-          err = error1;
-          throw new Error(`Unable to start watch method of watcher ${watcher_name}: ${err}`);
-        }
-      }
       // Once webapp is ready
       this._webapp.ready((err) => {
-        var j, len, mdwr, middleware, ref2, results, service_name;
+        var j, len, mdwr, middleware, ref1, results, service_name;
 // Register each different services by its namespace
         results = [];
         for (service_name in this.service_list) {
           ns[service_name] = service_name === '/' ? this._webapp.io.of('/') : this._webapp.io.of(`/${service_name}`);
-          ref2 = this.middleware_list[service_name];
+          ref1 = this.middleware_list[service_name];
           // Register middleware for namespace 
-          for (j = 0, len = ref2.length; j < len; j++) {
-            middleware = ref2[j];
+          for (j = 0, len = ref1.length; j < len; j++) {
+            middleware = ref1[j];
             mdwr = new middleware();
             ns[service_name].use(mdwr.handle(this.appHandle));
           }
@@ -403,6 +391,20 @@
         }
         return results;
       });
+      ref1 = this.watcher_list;
+      
+      // Start all watchers
+      for (watcher_name in ref1) {
+        watcher = ref1[watcher_name];
+        try {
+          this._logify(6, `[*] Start watcher ${watcher_name}`);
+          // Do not wait for watcher to finish...
+          watcher.watch();
+        } catch (error1) {
+          err = error1;
+          throw new Error(`Unable to start watch method of watcher ${watcher_name}: ${err}`);
+        }
+      }
       try {
         // Start web server
         this._logify(5, `[*] Starting server on https://${this.host}:${this.port} ...`);
@@ -427,17 +429,29 @@
       }
     }
 
-    sendTo({namespace, event, data, room = false, sid = false} = {}) {
+    sendTo({namespace, event, data, room = null, sid = null} = {}) {
       var ns, sockets;
-      ns = this._webapp.io.of(namespace || "/");
+      if (namespace != null) {
+        // Auto correct namespace
+        if (!namespace.startsWith('/')) {
+          namespace = `/${namespace}`;
+        }
+        
+        // Search for namespace object
+        ns = this._webapp.io.of(namespace);
+      } else {
+        ns = this._webapp.io.of('/');
+      }
+      
       // Send event to specific sid if set
-      if ((sid != null) && sid) {
-        return ns.sockets.get(sid).emit(event, data);
+      if (sid != null) {
+        ns.sockets.get(sid).emit(event, data);
       } else {
         // Restrict access to clients in room if set
-        sockets = (room != null) && room ? ns.in(room) : ns;
-        return sockets.emit(event, data);
+        sockets = room != null ? ns.in(room) : ns;
+        sockets.emit(event, data);
       }
+      return true;
     }
 
     // Once a client is connected, get ready to handle his events

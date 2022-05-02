@@ -295,14 +295,6 @@ module.exports = class IOServer
             @_logify 6, "[*] Register #{manager_name} manager"
             @appHandle[manager_name] = manager
         
-        # Start all watchers
-        for watcher_name, watcher of @watcher_list
-            @_logify 6, "[*] Start watcher #{watcher_name}"
-            try
-                watcher.watch()
-            catch err
-                throw new Error "Unable to start watch method of watcher #{watcher_name}: #{err}"
-
         # Once webapp is ready
         @_webapp.ready (err) =>
             # Register each different services by its namespace
@@ -318,6 +310,15 @@ module.exports = class IOServer
                 ns[service_name].on "connection", @_handleEvents(service_name)
                 @_logify 6, "[*] service #{service_name} registered..."
         
+        # Start all watchers
+        for watcher_name, watcher of @watcher_list
+            try
+                @_logify 6, "[*] Start watcher #{watcher_name}"
+                # Do not wait for watcher to finish...
+                watcher.watch()
+            catch err
+                throw new Error "Unable to start watch method of watcher #{watcher_name}: #{err}"
+
         try
             # Start web server
             @_logify 5, "[*] Starting server on https://#{@host}:#{@port} ..."
@@ -335,7 +336,13 @@ module.exports = class IOServer
 
     # Allow sending message from external app
     sendTo: ({namespace, event, data, room=false, sid=false}={}) =>
+        # Auto correct namespace
+        if not namespace.startsWith('/')
+            namespace = "/#{namespace}"
+        
+        # Search for namespace object
         ns = @_webapp.io.of(namespace || "/")
+        
         # Send event to specific sid if set
         if sid? and sid
             ns.sockets.get(sid).emit event, data
@@ -343,6 +350,8 @@ module.exports = class IOServer
             # Restrict access to clients in room if set
             sockets = if room? and room then ns.in(room) else ns
             sockets.emit event, data
+
+        return  true
 
     # Once a client is connected, get ready to handle his events
     _handleEvents: (service_name) ->

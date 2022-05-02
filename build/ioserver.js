@@ -122,7 +122,7 @@
       }
       try {
         // Register standard HTTP error shortcuts
-        this._webapp.register(require('fastify-sensible'), {
+        this._webapp.register(require('@fastify/sensible'), {
           errorHandler: false
         });
       } catch (error1) {
@@ -153,7 +153,7 @@
       }
       try {
         // Register standard HTTP error shortcuts
-        this._webapp.register(require('fastify-cors'), _cors);
+        this._webapp.register(require('@fastify/cors'), _cors);
       } catch (error1) {
         err = error1;
         throw new Error(`[!] Unable to register CORS plugin: ${err}`);
@@ -408,7 +408,10 @@
       try {
         // Start web server
         this._logify(5, `[*] Starting server on https://${this.host}:${this.port} ...`);
-        return (await this._webapp.listen(this.port, this.host));
+        return (await this._webapp.listen({
+          port: this.port,
+          host: this.host
+        }));
       } catch (error1) {
         err = error1;
         return this._logify(3, `[!] Unable to start server: ${err}`);

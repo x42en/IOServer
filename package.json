@@ -10,12 +10,12 @@
     "test": "test"
   },
   "dependencies": {
+    "@fastify/cors": "^7.0.0",
+    "@fastify/sensible": "^4.0.0",
     "colors": "^1.4.0",
-    "fastify": "^3.20.1",
-    "fastify-cors": "^6.0.2",
-    "fastify-sensible": "^3.1.1",
+    "fastify": "^3.29.0",
     "fastify-socket.io": "^3.0.0",
-    "socket.io": "^4.4.1"
+    "socket.io": "^4.5.0"
   },
   "devDependencies": {
     "chai": "^4.3.3",
@@ -23,7 +23,7 @@
     "coffeescript": "^2.5.1",
     "mocha": "^9.1.0",
     "snyk": "^1.467.0",
-    "socket.io-client": "^4.4.1"
+    "socket.io-client": "^4.5.0"
   },
   "scripts": {
     "dev": "$(npm bin)/coffee --no-header --map --watch --output build/ --compile src/",

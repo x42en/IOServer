@@ -335,23 +335,26 @@ module.exports = class IOServer
             throw new Error "[!] Unable to stop server: #{err}"
 
     # Allow sending message from external app
-    sendTo: ({namespace, event, data, room=false, sid=false}={}) =>
-        # Auto correct namespace
-        if not namespace.startsWith('/')
-            namespace = "/#{namespace}"
+    sendTo: ({namespace, event, data, room=null, sid=null}={}) =>
+        if namespace?
+            # Auto correct namespace
+            if not namespace.startsWith('/')
+                namespace = "/#{namespace}"
         
-        # Search for namespace object
-        ns = @_webapp.io.of(namespace || "/")
+            # Search for namespace object
+            ns = @_webapp.io.of(namespace)
+        else
+            ns = @_webapp.io.of('/')
         
         # Send event to specific sid if set
-        if sid? and sid
+        if sid?
             ns.sockets.get(sid).emit event, data
         else
             # Restrict access to clients in room if set
-            sockets = if room? and room then ns.in(room) else ns
+            sockets = if room? then ns.in(room) else ns
             sockets.emit event, data
 
-        return  true
+        return true
 
     # Once a client is connected, get ready to handle his events
     _handleEvents: (service_name) ->

@@ -1,5 +1,5 @@
 ####################################################
-#         IOServer - v1.3.2                        #
+#         IOServer - v1.3.3                        #
 #                                                  #
 #         Damn simple socket.io server             #
 ####################################################
@@ -29,7 +29,7 @@ path     = require 'path'
 fastify  = require 'fastify'
 
 # Set global vars
-VERSION    = '1.3.2'
+VERSION    = '1.3.3'
 PORT       = 8080
 HOST       = 'localhost'
 LOG_LEVEL  = ['EMERGENCY','ALERT','CRITICAL','ERROR','WARNING','NOTIFICATION','INFORMATION','DEBUG']
@@ -100,7 +100,7 @@ module.exports = class IOServer
         
         try
             # Register standard HTTP error shortcuts
-            @_webapp.register(require('fastify-sensible'), { errorHandler: false })
+            @_webapp.register(require('@fastify/sensible'), { errorHandler: false })
         catch err
             throw new Error "[!] Unable to register sensible plugin: #{err}"
         
@@ -122,7 +122,7 @@ module.exports = class IOServer
         
         try
             # Register standard HTTP error shortcuts
-            @_webapp.register(require('fastify-cors'), _cors)
+            @_webapp.register(require('@fastify/cors'), _cors)
         catch err
             throw new Error "[!] Unable to register CORS plugin: #{err}"
         
@@ -322,7 +322,9 @@ module.exports = class IOServer
         try
             # Start web server
             @_logify 5, "[*] Starting server on https://#{@host}:#{@port} ..."
-            await @_webapp.listen @port, @host
+            await @_webapp.listen
+                port: @port
+                host: @host
         catch err
             @_logify 3, "[!] Unable to start server: #{err}"
         

@@ -353,7 +353,7 @@
     // Launch socket IO and get ready to handle events on connection
     // Pass web server used for connections
     async start() {
-      var d, day, err, hours, manager, manager_name, minutes, month, ns, ref, ref1, seconds, watcher, watcher_name;
+      var d, day, err, hours, manager, manager_name, minutes, month, ns, ref, seconds;
       d = new Date();
       day = d.getDate() < 10 ? `0${d.getDate()}` : d.getDate();
       month = d.getMonth() < 10 ? `0${d.getMonth()}` : d.getMonth();
@@ -391,19 +391,22 @@
         }
         return results;
       });
-      ref1 = this.watcher_list;
-      
-      // Start all watchers
-      for (watcher_name in ref1) {
-        watcher = ref1[watcher_name];
-        try {
-          this._logify(6, `[*] Start watcher ${watcher_name}`);
-          // Do not wait for watcher to finish...
-          watcher.watch();
-        } catch (error1) {
-          err = error1;
-          throw new Error(`Unable to start watch method of watcher ${watcher_name}: ${err}`);
-        }
+      try {
+        // Start all watchers
+        // Do not wait for watchers to finish...
+        Promise.all(Object.values(this.watcher_list).map(async(watcher) => {
+          var err;
+          try {
+            this._logify(6, `[*] Start watcher ${watcher.constructor.name}`);
+            return (await watcher.watch());
+          } catch (error1) {
+            err = error1;
+            throw new Error(`Unable to start ${watcher.constructor.name} watcher: ${err}`);
+          }
+        }));
+      } catch (error1) {
+        err = error1;
+        throw new Error(`[!] Error on watchers start: ${err}`);
       }
       try {
         // Start web server

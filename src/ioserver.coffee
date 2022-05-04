@@ -1,5 +1,5 @@
 ####################################################
-#         IOServer - v1.3.3                        #
+#         IOServer - v1.3.4                        #
 #                                                  #
 #         Damn simple socket.io server             #
 ####################################################
@@ -29,7 +29,7 @@ path     = require 'path'
 fastify  = require 'fastify'
 
 # Set global vars
-VERSION    = '1.3.3'
+VERSION    = '1.3.4'
 PORT       = 8080
 HOST       = 'localhost'
 LOG_LEVEL  = ['EMERGENCY','ALERT','CRITICAL','ERROR','WARNING','NOTIFICATION','INFORMATION','DEBUG']
@@ -310,15 +310,18 @@ module.exports = class IOServer
                 ns[service_name].on "connection", @_handleEvents(service_name)
                 @_logify 6, "[*] service #{service_name} registered..."
         
-        # Start all watchers
-        for watcher_name, watcher of @watcher_list
-            try
-                @_logify 6, "[*] Start watcher #{watcher_name}"
-                # Do not wait for watcher to finish...
-                watcher.watch()
-            catch err
-                throw new Error "Unable to start watch method of watcher #{watcher_name}: #{err}"
-
+        try
+            # Start all watchers
+            # Do not wait for watchers to finish...
+            Promise.all Object.values(this.watcher_list).map (watcher) =>
+                try
+                    @_logify 6, "[*] Start watcher #{watcher.constructor.name}"
+                    await watcher.watch()
+                catch err
+                    throw new Error "Unable to start #{watcher.constructor.name} watcher: #{err}"
+        catch err
+            throw new Error "[!] Error on watchers start: #{err}"
+        
         try
             # Start web server
             @_logify 5, "[*] Starting server on https://#{@host}:#{@port} ..."

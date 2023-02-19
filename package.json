@@ -1,6 +1,6 @@
 {
   "name": "ioserver",
-  "version": "1.3.4",
+  "version": "1.4.0",
   "description": "Damn simple way to setup your Socket.io server using coffeescript or vanilla JS class.",
   "main": "build/ioserver.js",
   "files": [
@@ -10,26 +10,27 @@
     "test": "test"
   },
   "dependencies": {
-    "@fastify/cors": "^7.0.0",
-    "@fastify/sensible": "^4.0.0",
+    "@fastify/cors": "^8.2.0",
+    "@fastify/sensible": "^5.2.0",
     "colors": "^1.4.0",
-    "fastify": "^3.29.0",
-    "fastify-socket.io": "^3.0.0",
-    "socket.io": "^4.5.0"
+    "fastify": "^4.13.0",
+    "fastify-socket.io": "^4.0.0",
+    "socket.io": "^4.6.0"
   },
   "devDependencies": {
+    "@snyk/protect": "^1.1105.0",
     "chai": "^4.3.3",
     "chai-http": "^4.3.0",
-    "coffeescript": "^2.5.1",
-    "mocha": "^9.1.0",
-    "snyk": "^1.467.0",
+    "coffeescript": "^2.7.0",
+    "mocha": "^10.2.0",
     "socket.io-client": "^4.5.0"
   },
   "scripts": {
+    "prepare": "npm run snyk-protect",
+    "snyk-protect": "snyk-protect",
     "dev": "$(npm bin)/coffee --no-header --map --watch --output build/ --compile src/",
     "build": "$(npm bin)/coffee --no-header --map --output build/ --compile src/",
     "test": "$(npm bin)/coffee --no-header -c ./test && mocha --exit",
-    "snyk-protect": "$(npm bin)/snyk protect",
     "prepublish": "npm run snyk-protect",
     "gpr-setup": "node scripts/gpr.js"
   },

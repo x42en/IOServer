@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [12.x, 14.x, 16.x]
+        node-version: [14.x, 16.x]
     steps:
       - name: Checkout repository
         uses: actions/checkout@master
@@ -41,7 +41,7 @@ jobs:
           ref: master
 
       - name: Check version changes
-        uses: EndBug/version-check@v1
+        uses: EndBug/version-check@v2
         id: check
         with:
           file-url: https://unpkg.com/ioserver@latest/package.json
@@ -77,7 +77,11 @@ jobs:
 
       - name: Install dependencies
         if: steps.check.outputs.changed == 'true'
-        run: npm install
+        run: npm install --omit=dev
+
+      - name: Install snyk
+        if: steps.check.outputs.changed == 'true'
+        run: npm install @snyk/protect
 
       - name: Publish package to NPM
         if: steps.check.outputs.changed == 'true'

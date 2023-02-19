@@ -1,10 +1,10 @@
 (function() {
   //###################################################
-  //         IOServer - v1.3.4                        #
+  //         IOServer - v1.4.0                        #
   //                                                  #
   //         Damn simple socket.io server             #
   //###################################################
-  //             -    Copyright 2020    -             #
+  //             -    Copyright 2023    -             #
   //                                                  #
   //   License: Apache v 2.0                          #
   //   @Author: Ben Mz                                #
@@ -35,7 +35,7 @@
   fastify = require('fastify');
 
   // Set global vars
-  VERSION = '1.3.4';
+  VERSION = '1.4.0';
 
   PORT = 8080;
 

@@ -4,7 +4,7 @@
   //                                                  #
   //         Damn simple socket.io server             #
   //###################################################
-  //             -    Copyright 2020    -             #
+  //             -    Copyright 2023    -             #
   //                                                  #
   //   License: Apache v 2.0                          #
   //   @Author: Ben Mz                                #

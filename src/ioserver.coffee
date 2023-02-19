@@ -1,5 +1,5 @@
 ####################################################
-#         IOServer - v1.4.1                        #
+#         IOServer - v1.4.2                        #
 #                                                  #
 #         Damn simple socket.io server             #
 ####################################################
@@ -29,7 +29,7 @@ path     = require 'path'
 fastify  = require 'fastify'
 
 # Set global vars
-VERSION    = '1.4.1'
+VERSION    = '1.4.2'
 PORT       = 8080
 HOST       = 'localhost'
 LOG_LEVEL  = ['EMERGENCY','ALERT','CRITICAL','ERROR','WARNING','NOTIFICATION','INFORMATION','DEBUG']

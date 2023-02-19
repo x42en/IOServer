@@ -1,6 +1,6 @@
 (function() {
   //###################################################
-  //         IOServer - v1.3.5                        #
+  //         IOServer - v1.4.0                        #
   //                                                  #
   //         Damn simple socket.io server             #
   //###################################################
@@ -35,7 +35,7 @@
   fastify = require('fastify');
 
   // Set global vars
-  VERSION = '1.3.5';
+  VERSION = '1.4.0';
 
   PORT = 8080;
 

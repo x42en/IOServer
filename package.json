@@ -1,6 +1,6 @@
 {
   "name": "ioserver",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Damn simple way to setup your Socket.io server using coffeescript or vanilla JS class.",
   "main": "build/ioserver.js",
   "files": [
@@ -31,7 +31,6 @@
     "dev": "$(npm bin)/coffee --no-header --map --watch --output build/ --compile src/",
     "build": "$(npm bin)/coffee --no-header --map --output build/ --compile src/",
     "test": "$(npm bin)/coffee --no-header -c ./test && mocha --exit",
-    "prepublish": "npm run snyk-protect",
     "gpr-setup": "node scripts/gpr.js"
   },
   "repository": {

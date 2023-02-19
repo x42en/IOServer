@@ -77,11 +77,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.check.outputs.changed == 'true'
-        run: npm install --omit=dev
-
-      - name: Install snyk
-        if: steps.check.outputs.changed == 'true'
-        run: npm install @snyk/protect
+        run: npm install
 
       - name: Publish package to NPM
         if: steps.check.outputs.changed == 'true'

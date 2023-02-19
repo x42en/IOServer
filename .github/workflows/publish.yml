@@ -41,7 +41,7 @@ jobs:
           ref: master
 
       - name: Check version changes
-        uses: EndBug/version-check@v1
+        uses: EndBug/version-check@v2
         id: check
         with:
           file-url: https://unpkg.com/ioserver@latest/package.json

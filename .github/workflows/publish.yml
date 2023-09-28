@@ -86,7 +86,7 @@ jobs:
 
       - name: Publish package to NPM
         if: steps.check.outputs.changed == 'true'
-        run: pnpm publish
+        run: pnpm publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
 
@@ -103,6 +103,6 @@ jobs:
 
       - name: Publish package to GPR
         if: steps.check.outputs.changed == 'true'
-        run: pnpm publish
+        run: pnpm publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

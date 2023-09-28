@@ -1,6 +1,6 @@
 {
   "name": "ioserver",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "Damn simple way to setup your Socket.io server using coffeescript or vanilla JS class.",
   "main": "build/ioserver.js",
   "files": [
@@ -14,7 +14,7 @@
     "@fastify/sensible": "^5.2.0",
     "colors": "^1.4.0",
     "fastify": "^4.13.0",
-    "fastify-socket.io": "^4.0.0",
+    "fastify-socket.io": "^5.0.0",
     "socket.io": "^4.6.0"
   },
   "devDependencies": {
@@ -26,11 +26,11 @@
     "socket.io-client": "^4.5.0"
   },
   "scripts": {
-    "prepare": "npm run snyk-protect",
+    "prepare": "pnpm run snyk-protect",
     "snyk-protect": "snyk-protect",
-    "dev": "$(npm bin)/coffee --no-header --map --watch --output build/ --compile src/",
-    "build": "$(npm bin)/coffee --no-header --map --output build/ --compile src/",
-    "test": "$(npm bin)/coffee --no-header -c ./test && mocha --exit",
+    "dev": "$(pnpm bin)/coffee --no-header --map --watch --output build/ --compile src/",
+    "build": "$(pnpm bin)/coffee --no-header --map --output build/ --compile src/",
+    "test": "$(pnpm bin)/coffee --no-header -c ./test && mocha --exit",
     "gpr-setup": "node scripts/gpr.js"
   },
   "repository": {

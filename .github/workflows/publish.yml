@@ -19,9 +19,10 @@ jobs:
           node-version: ${{ matrix.node-version }}
           registry-url: https://npm.pkg.github.com/
           scope: "@x42en"
-      - run: npm install
-      - run: npm run build --if-present
-      - run: npm test
+      - run: npm i -g pnpm
+      - run: pnpm install
+      - run: pnpm run build
+      - run: pnpm test
         env:
           CI: true
 
@@ -77,11 +78,11 @@ jobs:
 
       - name: Install dependencies
         if: steps.check.outputs.changed == 'true'
-        run: npm install
+        run: pnpm install
 
       - name: Publish package to NPM
         if: steps.check.outputs.changed == 'true'
-        run: npm publish
+        run: pnpm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
 
@@ -94,10 +95,10 @@ jobs:
 
       - name: Set up package for GPR
         if: steps.check.outputs.changed == 'true'
-        run: npm run gpr-setup
+        run: pnpm run gpr-setup
 
       - name: Publish package to GPR
         if: steps.check.outputs.changed == 'true'
-        run: npm publish
+        run: pnpm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

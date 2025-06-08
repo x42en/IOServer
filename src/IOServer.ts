@@ -9,6 +9,7 @@ import fastify, {
 import { Server as SocketIOServer } from 'socket.io';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
+import { IOServerError } from './IOServerError';
 
 // Extend Fastify instance to include Socket.IO
 declare module 'fastify' {
@@ -75,41 +76,6 @@ export type LogLevel =
   | 'INFORMATION'
   | 'DEBUG';
 export type TransportMode = 'websocket' | 'polling';
-
-export class IOServerError extends Error {
-  public readonly type: string;
-  public readonly code: number;
-
-  constructor(message: string, code: number = -1) {
-    super(message);
-    this.name = 'IOServerError';
-    this.type = this.constructor.name;
-    this.code = code;
-
-    // Ensure proper prototype chain for instanceof checks
-    Object.setPrototypeOf(this, IOServerError.prototype);
-  }
-
-  getMessage(): string {
-    return this.message;
-  }
-
-  getType(): string {
-    return this.type;
-  }
-
-  getCode(): number {
-    return this.code;
-  }
-
-  toJson(): object {
-    return {
-      message: this.message,
-      type: this.type,
-      code: this.code,
-    };
-  }
-}
 
 export class IOServer {
   private static readonly VERSION = '2.0.0';
@@ -260,8 +226,11 @@ export class IOServer {
       this.webapp.setErrorHandler(
         (error: any, request: FastifyRequest, reply: FastifyReply) => {
           if (error instanceof IOServerError) {
-            const code = error.getCode() < 0 ? 500 : error.getCode();
-            reply.status(code).send(error.toJson());
+            reply.status(error.statusCode).send({
+              statusCode: error.statusCode,
+              error: error.name,
+              message: error.message,
+            });
           } else if (error.status) {
             reply.status(error.status).send({
               statusCode: error.status,
@@ -717,14 +686,14 @@ export class IOServer {
       } catch (error) {
         let ioError = error;
         if (typeof error === 'string') {
-          ioError = new IOServerError(error, -1);
+          ioError = new IOServerError(error, 500);
         }
 
         const payload = {
           status: 'error',
           type: (ioError as any)?.constructor?.name || 'Error',
           message: (ioError as any)?.message || null,
-          code: (ioError as any)?.code || -1,
+          statusCode: (ioError as any)?.statusCode || 500,
         };
 
         this.log(

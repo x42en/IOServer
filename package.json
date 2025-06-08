@@ -19,6 +19,8 @@
     "test:performance": "jest --testPathPattern=performance",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "docs:build": "cd docs && make html",
+    "docs:api": "typedoc src/index.ts --out docs/source/_static/api --theme default --readme none --hideGenerator",
     "prepublishOnly": "npm run build && npm run test"
   },
   "keywords": [
@@ -67,6 +69,7 @@
     "supertest": "^7.0.0",
     "ts-jest": "^29.3.4",
     "ts-node": "^10.9.2",
+    "typedoc": "^0.26.0",
     "typescript": "^5.8.3"
   },
   "peerDependencies": {

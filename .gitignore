@@ -200,3 +200,10 @@ GitHub.sublime-settings
 *.code-workspace
 
 # End of https://www.toptal.com/developers/gitignore/api/node,macos,linux,vscode,sublimetext,npm
+
+# Prevent doc builds from being committed
+docs/build/
+
+# Ignore coverage reports
+coverage/
+# Ignore local environment files

@@ -1,0 +1,63 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "out": "docs/source/_static/api",
+  "theme": "default",
+  "readme": "none",
+  "hideGenerator": true,
+  "sort": ["source-order"],
+  "categorizeByGroup": true,
+  "defaultCategory": "API",
+  "categoryOrder": [
+    "Main Classes",
+    "Base Classes", 
+    "Interfaces",
+    "Type Definitions",
+    "Errors"
+  ],
+  "groupOrder": [
+    "Classes",
+    "Interfaces",
+    "Types",
+    "Functions"
+  ],
+  "excludePrivate": false,
+  "excludeProtected": false,
+  "excludeInternal": false,
+  "includeVersion": true,
+  "searchInComments": true,
+  "cleanOutputDir": true,
+  "treatWarningsAsErrors": false,
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+  "commentStyle": "jsdoc",
+  "blockTags": [
+    "@alpha",
+    "@beta", 
+    "@deprecated",
+    "@example",
+    "@experimental",
+    "@internal",
+    "@override",
+    "@param",
+    "@privateRemarks",
+    "@public",
+    "@readonly",
+    "@remarks",
+    "@returns",
+    "@sealed",
+    "@see",
+    "@since",
+    "@throws",
+    "@virtual"
+  ],
+  "inlineTags": [
+    "@inheritDoc",
+    "@label",
+    "@link",
+    "@linkcode",
+    "@linkplain"
+  ]
+}

@@ -1,7 +1,0 @@
-[
-  {
-    "method": "GET",
-    "url": "/",
-    "handler": "restricted"
-  }
-]

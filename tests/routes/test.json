@@ -1,0 +1,12 @@
+[
+    {
+        "method": "GET",
+        "url": "/test",
+        "handler": "testHandler"
+    },
+    {
+        "method": "POST",
+        "url": "/test",
+        "handler": "testHandler"
+    }
+]

@@ -1,0 +1,12 @@
+[
+    {
+        "method": "GET",
+        "url": "/status",
+        "handler": "getStatus"
+    },
+    {
+        "method": "GET",
+        "url": "/stats",
+        "handler": "getStats"
+    }
+]

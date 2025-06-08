@@ -1,0 +1,12 @@
+[
+    {
+        "method": "GET",
+        "url": "/",
+        "handler": "getRoot"
+    },
+    {
+        "method": "GET",
+        "url": "/health",
+        "handler": "getHealth"
+    }
+]

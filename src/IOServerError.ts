@@ -3,7 +3,7 @@ export class IOServerError extends Error {
 
   constructor(message: string, statusCode: number = 500) {
     super(message);
-    this.name = "IOServerError";
+    this.name = 'IOServerError';
     this.statusCode = statusCode;
 
     // Ensure proper prototype chain for instanceof checks

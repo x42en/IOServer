@@ -1,5 +1,5 @@
-export { IOServer as default, IOServer } from "./IOServer";
-export { IOServerError } from "./IOServerError";
+export { IOServer as default, IOServer } from './IOServer';
+export { IOServerError } from './IOServerError';
 export type {
   IOServerOptions,
   ServiceOptions,
@@ -10,7 +10,7 @@ export type {
   AppHandle,
   LogLevel,
   TransportMode,
-} from "./IOServer";
+} from './IOServer';
 
 // Base classes for extending
 export abstract class BaseService {

@@ -1,17 +1,17 @@
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from 'fs';
+import * as path from 'path';
 import fastify, {
   FastifyInstance,
   FastifyRequest,
   FastifyReply,
   RouteOptions,
-} from "fastify";
-import { Server as SocketIOServer } from "socket.io";
-import cors from "@fastify/cors";
-import sensible from "@fastify/sensible";
+} from 'fastify';
+import { Server as SocketIOServer } from 'socket.io';
+import cors from '@fastify/cors';
+import sensible from '@fastify/sensible';
 
 // Extend Fastify instance to include Socket.IO
-declare module "fastify" {
+declare module 'fastify' {
   interface FastifyInstance {
     io: SocketIOServer;
   }
@@ -66,15 +66,15 @@ export interface AppHandle {
 }
 
 export type LogLevel =
-  | "EMERGENCY"
-  | "ALERT"
-  | "CRITICAL"
-  | "ERROR"
-  | "WARNING"
-  | "NOTIFICATION"
-  | "INFORMATION"
-  | "DEBUG";
-export type TransportMode = "websocket" | "polling";
+  | 'EMERGENCY'
+  | 'ALERT'
+  | 'CRITICAL'
+  | 'ERROR'
+  | 'WARNING'
+  | 'NOTIFICATION'
+  | 'INFORMATION'
+  | 'DEBUG';
+export type TransportMode = 'websocket' | 'polling';
 
 export class IOServerError extends Error {
   public readonly type: string;
@@ -82,7 +82,7 @@ export class IOServerError extends Error {
 
   constructor(message: string, code: number = -1) {
     super(message);
-    this.name = "IOServerError";
+    this.name = 'IOServerError';
     this.type = this.constructor.name;
     this.code = code;
 
@@ -112,24 +112,24 @@ export class IOServerError extends Error {
 }
 
 export class IOServer {
-  private static readonly VERSION = "2.0.0";
+  private static readonly VERSION = '2.0.0';
   private static readonly DEFAULT_PORT = 8080;
-  private static readonly DEFAULT_HOST = "localhost";
+  private static readonly DEFAULT_HOST = 'localhost';
   private static readonly LOG_LEVELS: LogLevel[] = [
-    "EMERGENCY",
-    "ALERT",
-    "CRITICAL",
-    "ERROR",
-    "WARNING",
-    "NOTIFICATION",
-    "INFORMATION",
-    "DEBUG",
+    'EMERGENCY',
+    'ALERT',
+    'CRITICAL',
+    'ERROR',
+    'WARNING',
+    'NOTIFICATION',
+    'INFORMATION',
+    'DEBUG',
   ];
   private static readonly TRANSPORTS: TransportMode[] = [
-    "websocket",
-    "polling",
+    'websocket',
+    'polling',
   ];
-  private static readonly RESERVED_NAMES = ["send", "log", "verbose"];
+  private static readonly RESERVED_NAMES = ['send', 'log', 'verbose'];
 
   private readonly host: string;
   private readonly port: number;
@@ -149,9 +149,9 @@ export class IOServer {
   constructor(options: IOServerOptions = {}) {
     this.host = options.host || IOServer.DEFAULT_HOST;
     this.port = this.validatePort(options.port || IOServer.DEFAULT_PORT);
-    this.verbose = this.validateLogLevel(options.verbose || "ERROR");
+    this.verbose = this.validateLogLevel(options.verbose || 'ERROR');
 
-    const defaultRoutes = path.join(process.cwd(), "routes");
+    const defaultRoutes = path.join(process.cwd(), 'routes');
     this.routesPath =
       options.routes && fs.existsSync(options.routes)
         ? options.routes
@@ -175,44 +175,44 @@ export class IOServer {
   private validatePort(port: number): number {
     const numPort = Number(port);
     if (isNaN(numPort) || numPort <= 0 || numPort > 65535) {
-      throw new IOServerError("Invalid port number", 400);
+      throw new IOServerError('Invalid port number', 400);
     }
     return numPort;
   }
 
   private validateLogLevel(level: string): LogLevel {
     const upperLevel = level.toUpperCase() as LogLevel;
-    return IOServer.LOG_LEVELS.includes(upperLevel) ? upperLevel : "ERROR";
+    return IOServer.LOG_LEVELS.includes(upperLevel) ? upperLevel : 'ERROR';
   }
 
   private processTransportModes(
     mode?: TransportMode | TransportMode[]
   ): TransportMode[] {
     if (!mode) {
-      return ["websocket", "polling"];
+      return ['websocket', 'polling'];
     }
 
     const modes: TransportMode[] = [];
-    if (typeof mode === "string") {
+    if (typeof mode === 'string') {
       if (IOServer.TRANSPORTS.includes(mode)) {
         modes.push(mode);
       }
     } else if (Array.isArray(mode)) {
-      mode.forEach((m) => {
+      mode.forEach(m => {
         if (IOServer.TRANSPORTS.includes(m)) {
           modes.push(m);
         }
       });
     }
 
-    return modes.length > 0 ? modes : ["websocket", "polling"];
+    return modes.length > 0 ? modes : ['websocket', 'polling'];
   }
 
   private processCorsOptions(cors?: any): any {
     const corsConfig = cors || {};
 
     if (!corsConfig.methods) {
-      corsConfig.methods = ["GET", "POST"];
+      corsConfig.methods = ['GET', 'POST'];
     }
 
     if (!corsConfig.origin) {
@@ -225,7 +225,7 @@ export class IOServer {
   private initializeFastify(): FastifyInstance {
     try {
       return fastify({
-        logger: this.verbose === "DEBUG",
+        logger: this.verbose === 'DEBUG',
         ignoreTrailingSlash: true,
         maxParamLength: 200,
         caseSensitive: true,
@@ -251,7 +251,7 @@ export class IOServer {
       this.webapp.setNotFoundHandler((request, reply) => {
         reply.code(404).send({
           statusCode: 404,
-          error: "Not Found",
+          error: 'Not Found',
           message: `Route ${request.method}:${request.url} not found`,
         });
       });
@@ -265,13 +265,13 @@ export class IOServer {
           } else if (error.status) {
             reply.status(error.status).send({
               statusCode: error.status,
-              error: error.name || "Error",
+              error: error.name || 'Error',
               message: error.message,
             });
           } else {
             reply.status(500).send({
               statusCode: 500,
-              error: "Internal Server Error",
+              error: 'Internal Server Error',
               message: error.message,
             });
           }
@@ -299,7 +299,7 @@ export class IOServer {
         // Add io property to webapp for compatibility
         (this.webapp as any).io = this.socketio;
 
-        this.log(6, "[*] Socket.IO server attached to HTTP server");
+        this.log(6, '[*] Socket.IO server attached to HTTP server');
       });
     } catch (error) {
       throw new IOServerError(`Unable to setup Socket.IO: ${error}`, 500);
@@ -328,19 +328,19 @@ export class IOServer {
     ClassConstructor: new (appHandle: AppHandle) => any
   ): void {
     if (!name) {
-      throw new IOServerError("Name is mandatory", 400);
+      throw new IOServerError('Name is mandatory', 400);
     }
 
-    if (type !== "service" && name.length < 2) {
-      throw new IOServerError("Name must be longer than 2 characters", 400);
+    if (type !== 'service' && name.length < 2) {
+      throw new IOServerError('Name must be longer than 2 characters', 400);
     }
 
     if (IOServer.RESERVED_NAMES.includes(name)) {
-      throw new IOServerError("Sorry this is a reserved name", 400);
+      throw new IOServerError('Sorry this is a reserved name', 400);
     }
 
     if (!ClassConstructor || !ClassConstructor.prototype) {
-      throw new IOServerError("Must be a constructor function", 400);
+      throw new IOServerError('Must be a constructor function', 400);
     }
 
     const listMap = this.getListMap(type);
@@ -359,13 +359,13 @@ export class IOServer {
 
   private getListMap(type: string): Map<string, any> {
     switch (type) {
-      case "service":
+      case 'service':
         return this.serviceLists;
-      case "manager":
+      case 'manager':
         return this.managerLists;
-      case "watcher":
+      case 'watcher':
         return this.watcherLists;
-      case "controller":
+      case 'controller':
         return this.controllerLists;
       default:
         throw new IOServerError(`Unknown type: ${type}`, 400);
@@ -389,7 +389,7 @@ export class IOServer {
 
   public addWatcher(options: WatcherOptions): void {
     try {
-      this.registerInternalClass("watcher", options.name, options.watcher);
+      this.registerInternalClass('watcher', options.name, options.watcher);
     } catch (error) {
       throw new IOServerError(
         `Error while instantiating ${options.name} watcher: ${error}`,
@@ -400,7 +400,7 @@ export class IOServer {
 
   public addManager(options: ManagerOptions): void {
     try {
-      this.registerInternalClass("manager", options.name, options.manager);
+      this.registerInternalClass('manager', options.name, options.manager);
     } catch (error) {
       throw new IOServerError(
         `Error while instantiating ${options.name} manager: ${error}`,
@@ -410,10 +410,10 @@ export class IOServer {
   }
 
   public addService(options: ServiceOptions): void {
-    const name = options.name || "/";
+    const name = options.name || '/';
 
     try {
-      this.registerInternalClass("service", name, options.service);
+      this.registerInternalClass('service', name, options.service);
     } catch (error) {
       throw new IOServerError(
         `Error while instantiating ${name} service: ${error}`,
@@ -431,17 +431,17 @@ export class IOServer {
 
     // Sanitize prefix
     if (prefix) {
-      if (!prefix.startsWith("/")) {
+      if (!prefix.startsWith('/')) {
         prefix = `/${prefix}`;
       }
-      if (prefix.endsWith("/")) {
+      if (prefix.endsWith('/')) {
         prefix = prefix.slice(0, -1);
       }
     }
 
     try {
       this.registerInternalClass(
-        "controller",
+        'controller',
         options.name,
         options.controller
       );
@@ -458,7 +458,7 @@ export class IOServer {
     }
 
     try {
-      const routes = JSON.parse(fs.readFileSync(routeFile, "utf8"));
+      const routes = JSON.parse(fs.readFileSync(routeFile, 'utf8'));
       this.registerControllerRoutes(routes, options.name, prefix, middlewares);
     } catch (error) {
       throw new IOServerError(
@@ -476,21 +476,21 @@ export class IOServer {
   ): void {
     const controller = this.controllerLists.get(controllerName);
 
-    routes.forEach((route) => {
+    routes.forEach(route => {
       // Map controller methods to route handlers
       const handlerOptions = [
-        "onRequest",
-        "preParsing",
-        "preValidation",
-        "preHandler",
-        "preSerialization",
-        "onSend",
-        "onResponse",
-        "handler",
-        "errorHandler",
+        'onRequest',
+        'preParsing',
+        'preValidation',
+        'preHandler',
+        'preSerialization',
+        'onSend',
+        'onResponse',
+        'handler',
+        'errorHandler',
       ];
 
-      handlerOptions.forEach((option) => {
+      handlerOptions.forEach(option => {
         if (route[option] && controller[route[option]]) {
           route[option] = controller[route[option]].bind(controller);
         }
@@ -504,9 +504,9 @@ export class IOServer {
         route.url = prefix + route.url;
       } else {
         // Default behavior: use controller name as prefix unless route is "/"
-        if (route.url === "/" && controllerName !== "root") {
+        if (route.url === '/' && controllerName !== 'root') {
           // Keep root route as-is for main controllers
-          route.url = "/";
+          route.url = '/';
         } else {
           route.url = `/${controllerName}${route.url}`;
         }
@@ -517,7 +517,7 @@ export class IOServer {
         route.preValidation = [];
       }
 
-      middlewares.forEach((MiddlewareClass) => {
+      middlewares.forEach(MiddlewareClass => {
         const middleware = new MiddlewareClass();
         if (middleware.handle) {
           route.preValidation.push(middleware.handle(this.appHandle));
@@ -563,26 +563,26 @@ export class IOServer {
     let retries = 0;
     const maxRetries = 10;
     while (!this.socketio && retries < maxRetries) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 100));
       retries++;
     }
 
     if (!this.socketio) {
-      throw new IOServerError("Socket.IO server failed to initialize", 500);
+      throw new IOServerError('Socket.IO server failed to initialize', 500);
     }
 
-    this.log(6, "[*] Socket.IO server ready");
+    this.log(6, '[*] Socket.IO server ready');
 
     // Setup Socket.IO namespaces and services
     this.serviceLists.forEach((service, serviceName) => {
       const namespace =
-        serviceName === "/"
-          ? this.socketio.of("/")
+        serviceName === '/'
+          ? this.socketio.of('/')
           : this.socketio.of(`/${serviceName}`);
 
       // Register middleware for namespace
       const middlewares = this.middlewareLists.get(serviceName) || [];
-      middlewares.forEach((MiddlewareClass) => {
+      middlewares.forEach(MiddlewareClass => {
         const middleware = new MiddlewareClass();
         if (middleware.handle) {
           namespace.use(middleware.handle(this.appHandle));
@@ -590,14 +590,14 @@ export class IOServer {
       });
 
       // Setup connection handler
-      namespace.on("connection", this.handleConnection(serviceName));
+      namespace.on('connection', this.handleConnection(serviceName));
       this.log(6, `[*] Service ${serviceName} registered...`);
     });
 
     // Start watchers
     try {
       const watcherPromises = Array.from(this.watcherLists.values()).map(
-        async (watcher) => {
+        async watcher => {
           try {
             this.log(6, `[*] Start watcher ${watcher.constructor.name}`);
             if (watcher.watch) {
@@ -613,7 +613,7 @@ export class IOServer {
       );
 
       // Don't wait for watchers to complete
-      Promise.all(watcherPromises).catch((error) => {
+      Promise.all(watcherPromises).catch(error => {
         this.log(3, `[!] Error starting watchers: ${error}`);
       });
     } catch (error) {
@@ -649,7 +649,7 @@ export class IOServer {
   public async stop(): Promise<void> {
     try {
       await this.webapp.close();
-      this.log(6, "[*] Server stopped");
+      this.log(6, '[*] Server stopped');
     } catch (error) {
       throw new IOServerError(`Unable to stop server: ${error}`, 500);
     }
@@ -657,18 +657,18 @@ export class IOServer {
 
   public sendTo(options: SendToOptions): boolean {
     if (!this.socketio) {
-      this.log(3, "[!] Socket.IO not initialized, cannot send message");
+      this.log(3, '[!] Socket.IO not initialized, cannot send message');
       return false;
     }
 
     let namespace = options.namespace;
 
     if (namespace) {
-      if (!namespace.startsWith("/")) {
+      if (!namespace.startsWith('/')) {
         namespace = `/${namespace}`;
       }
     } else {
-      namespace = "/";
+      namespace = '/';
     }
 
     const ns = this.socketio.of(namespace);
@@ -693,9 +693,9 @@ export class IOServer {
       const methods = this.methodLists.get(serviceName) || [];
       const service = this.serviceLists.get(serviceName);
 
-      methods.forEach((method) => {
+      methods.forEach(method => {
         // Skip private methods and constructor
-        if (method.startsWith("_") || method === "constructor") {
+        if (method.startsWith('_') || method === 'constructor') {
           return;
         }
 
@@ -716,13 +716,13 @@ export class IOServer {
         }
       } catch (error) {
         let ioError = error;
-        if (typeof error === "string") {
+        if (typeof error === 'string') {
           ioError = new IOServerError(error, -1);
         }
 
         const payload = {
-          status: "error",
-          type: (ioError as any)?.constructor?.name || "Error",
+          status: 'error',
+          type: (ioError as any)?.constructor?.name || 'Error',
           message: (ioError as any)?.message || null,
           code: (ioError as any)?.code || -1,
         };
@@ -735,7 +735,7 @@ export class IOServer {
         if (callback) {
           callback(payload);
         } else {
-          socket.emit("error", payload);
+          socket.emit('error', payload);
         }
       }
     };

@@ -1,6 +1,6 @@
 {
   "name": "ioserver",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Damn simple Fastify & Socket.io server framework with TypeScript support",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,6 +22,8 @@
     "docs:build": "cd docs && make html",
     "docs:api": "typedoc --options typedoc.json",
     "docs:serve": "cd docs/build/html && python -m http.server 8000",
+    "gpr-setup": "node scripts/gpr.js",
+    "gpr-restore": "node scripts/gpr-restore.js",
     "prepublishOnly": "npm run build && npm run test"
   },
   "keywords": [

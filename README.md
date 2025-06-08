@@ -1,7 +1,7 @@
 # 🚀 IOServer
 
 [![npm version](https://badge.fury.io/js/ioserver.svg)](https://badge.fury.io/js/ioserver)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Node.js CI](https://github.com/x42en/IOServer/workflows/Node.js%20CI/badge.svg)](https://github.com/x42en/IOServer/actions)
 [![Coverage Status](https://coveralls.io/repos/github/x42en/IOServer/badge.svg?branch=main)](https://coveralls.io/github/x42en/IOServer?branch=main)
 [![TypeScript](https://img.shields.io/badge/TypeScript-4.9+-blue.svg)](https://www.typescriptlang.org/)
@@ -34,41 +34,41 @@ yarn add ioserver
 ### Basic Usage
 
 ```typescript
-import { IOServer, BaseService, BaseController } from "ioserver";
+import { IOServer, BaseService, BaseController } from 'ioserver';
 
 // Create a service for real-time functionality
 class ChatService extends BaseService {
   async sendMessage(socket: any, data: any, callback?: Function) {
     // Handle real-time messaging
-    socket.broadcast.emit("new_message", data);
-    if (callback) callback({ status: "success" });
+    socket.broadcast.emit('new_message', data);
+    if (callback) callback({ status: 'success' });
   }
 }
 
 // Create a controller for HTTP endpoints
 class ApiController extends BaseController {
   async getStatus(request: any, reply: any) {
-    reply.send({ status: "OK", timestamp: Date.now() });
+    reply.send({ status: 'OK', timestamp: Date.now() });
   }
 }
 
 // Initialize and configure server
 const server = new IOServer({
-  host: "localhost",
+  host: 'localhost',
   port: 3000,
   cors: {
-    origin: ["http://localhost:3000"],
-    methods: ["GET", "POST"],
+    origin: ['http://localhost:3000'],
+    methods: ['GET', 'POST'],
   },
 });
 
 // Register components
-server.addService({ name: "chat", service: ChatService });
-server.addController({ name: "api", controller: ApiController });
+server.addService({ name: 'chat', service: ChatService });
+server.addController({ name: 'api', controller: ApiController });
 
 // Start server
 await server.start();
-console.log("🚀 Server running at http://localhost:3000");
+console.log('🚀 Server running at http://localhost:3000');
 ```
 
 ## 🏗️ Architecture
@@ -83,7 +83,7 @@ Handle WebSocket connections and real-time events.
 class NotificationService extends BaseService {
   async notify(socket: any, data: any, callback?: Function) {
     // Real-time notification logic
-    socket.emit("notification", { message: data.message });
+    socket.emit('notification', { message: data.message });
     if (callback) callback({ delivered: true });
   }
 }
@@ -97,7 +97,7 @@ Handle HTTP requests with automatic route mapping from JSON configuration.
 class UserController extends BaseController {
   async getUser(request: any, reply: any) {
     const userId = request.params.id;
-    reply.send({ id: userId, name: "John Doe" });
+    reply.send({ id: userId, name: 'John Doe' });
   }
 }
 ```
@@ -136,17 +136,17 @@ class HealthWatcher extends BaseWatcher {
 
 ```typescript
 const server = new IOServer({
-  host: "localhost", // Server host
+  host: 'localhost', // Server host
   port: 3000, // Server port
-  verbose: "INFO", // Log level
-  routes: "./routes", // Route definitions directory
+  verbose: 'INFO', // Log level
+  routes: './routes', // Route definitions directory
   cors: {
     // CORS configuration
-    origin: ["http://localhost:3000"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: ['http://localhost:3000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
   },
-  mode: ["websocket", "polling"], // Socket.IO transport modes
+  mode: ['websocket', 'polling'], // Socket.IO transport modes
 });
 ```
 
@@ -245,7 +245,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 

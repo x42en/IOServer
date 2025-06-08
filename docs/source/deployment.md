@@ -51,7 +51,7 @@ SSL_KEY_PATH=/path/to/key.pem
 ### Production Server Configuration
 
 ```typescript
-import { IOServer } from '@ioserver/core';
+import { IOServer } from 'ioserver';
 import * as dotenv from 'dotenv';
 
 dotenv.config();

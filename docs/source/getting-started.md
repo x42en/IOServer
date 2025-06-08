@@ -7,11 +7,11 @@ This guide will help you get started with IOServer quickly and efficiently.
 Install IOServer using npm or yarn:
 
 ```bash
-npm install @ioserver/core
+npm install ioserver
 # or
-yarn add @ioserver/core
+yarn add ioserver
 # or
-pnpm add @ioserver/core
+pnpm add ioserver
 ```
 
 ## Requirements
@@ -24,7 +24,7 @@ pnpm add @ioserver/core
 ### 1. Create Your First Server
 
 ```typescript
-import { IOServer } from '@ioserver/core';
+import { IOServer } from 'ioserver';
 
 const server = new IOServer({
   host: 'localhost',
@@ -41,7 +41,7 @@ console.log('🚀 Server running at http://localhost:3000');
 Services handle WebSocket connections and real-time events:
 
 ```typescript
-import { BaseService } from '@ioserver/core';
+import { BaseService } from 'ioserver';
 
 class NotificationService extends BaseService {
   async notify(socket: any, data: any, callback?: Function) {
@@ -67,7 +67,7 @@ server.addService({
 Controllers handle HTTP requests with automatic route mapping:
 
 ```typescript
-import { BaseController } from '@ioserver/core';
+import { BaseController } from 'ioserver';
 
 class ApiController extends BaseController {
   async getStatus(request: any, reply: any) {

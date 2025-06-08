@@ -1,7 +1,7 @@
 {
-  "name": "@ioserver/core",
-  "version": "2.0.0",
-  "description": "Damn simple socket.io server framework with TypeScript support",
+  "name": "ioserver",
+  "version": "2.0.1",
+  "description": "Damn simple Fastify & Socket.io server framework with TypeScript support",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -37,12 +37,12 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/x42en/ioserver-ts.git"
+    "url": "https://github.com/x42en/IOServer.git"
   },
   "bugs": {
-    "url": "https://github.com/x42en/ioserver-ts/issues"
+    "url": "https://github.com/x42en/IOServer/issues"
   },
-  "homepage": "https://github.com/x42en/ioserver-ts#readme",
+  "homepage": "https://github.com/x42en/IOServer#readme",
   "files": [
     "dist/**/*",
     "README.md",

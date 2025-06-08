@@ -31,7 +31,7 @@ importers:
         specifier: ^22.15.30
         version: 22.15.30
       '@types/supertest':
-        specifier: ^6.0.2
+        specifier: ^6.0.3
         version: 6.0.3
       '@typescript-eslint/eslint-plugin':
         specifier: ^8.33.1
@@ -49,7 +49,7 @@ importers:
         specifier: ^4.8.1
         version: 4.8.1
       supertest:
-        specifier: ^7.0.0
+        specifier: ^7.1.1
         version: 7.1.1
       ts-jest:
         specifier: ^29.3.4
@@ -58,7 +58,7 @@ importers:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@22.15.30)(typescript@5.8.3)
       typedoc:
-        specifier: ^0.26.0
+        specifier: ^0.26.11
         version: 0.26.11(typescript@5.8.3)
       typescript:
         specifier: ^5.8.3

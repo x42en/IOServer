@@ -7,8 +7,8 @@ on:
       - master
 
 env:
-  NODE_VERSION: "20.x"
-  PNPM_VERSION: "9"
+  NODE_VERSION: '20.x'
+  PNPM_VERSION: '9'
 
 jobs:
   build:
@@ -85,7 +85,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          registry-url: "https://registry.npmjs.org"
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install pnpm
         if: steps.check.outputs.changed == 'true'
@@ -108,7 +108,7 @@ jobs:
         with:
           custom_tag: ${{ steps.check.outputs.version }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          tag_prefix: "v"
+          tag_prefix: 'v'
 
       - name: Create GitHub release
         if: steps.check.outputs.changed == 'true'
@@ -133,8 +133,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          registry-url: "https://npm.pkg.github.com/"
-          scope: "@x42en"
+          registry-url: 'https://npm.pkg.github.com/'
+          scope: '@x42en'
 
       - name: Prepare package for GitHub Packages
         if: steps.check.outputs.changed == 'true'
@@ -145,3 +145,7 @@ jobs:
         run: pnpm publish --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Restore package configuration
+        if: steps.check.outputs.changed == 'true'
+        run: pnpm run gpr-restore

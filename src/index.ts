@@ -17,7 +17,7 @@
  *
  * @example
  * ```typescript
- * import { IOServer, BaseService } from '@ioserver/core';
+ * import { IOServer, BaseService } from 'ioserver';
  *
  * class ChatService extends BaseService {
  *   async sendMessage(socket: any, data: any, callback?: Function) {

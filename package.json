@@ -1,59 +1,75 @@
 {
-  "name": "ioserver",
-  "version": "1.5.3",
-  "description": "Damn simple way to setup your Socket.io server using coffeescript or vanilla JS class.",
-  "main": "build/ioserver.js",
-  "files": [
-    "build/"
-  ],
-  "directories": {
-    "test": "test"
-  },
-  "dependencies": {
-    "@fastify/cors": "^8.2.0",
-    "@fastify/sensible": "^5.2.0",
-    "colors": "^1.4.0",
-    "fastify": "^4.13.0",
-    "fastify-socket.io": "^5.0.0",
-    "socket.io": "^4.6.0"
-  },
-  "devDependencies": {
-    "@snyk/protect": "^1.1105.0",
-    "chai": "^4.3.3",
-    "chai-http": "^4.3.0",
-    "coffeescript": "^2.7.0",
-    "mocha": "^10.2.0",
-    "socket.io-client": "^4.5.0"
-  },
+  "name": "@ioserver/core",
+  "version": "2.0.0",
+  "description": "Damn simple socket.io server framework with TypeScript support",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "prepare": "pnpm run snyk-protect",
-    "snyk-protect": "snyk-protect",
-    "dev": "$(pnpm bin)/coffee --no-header --map --watch --output build/ --compile src/",
-    "build": "$(pnpm bin)/coffee --no-header --map --output build/ --compile src/",
-    "test": "$(pnpm bin)/coffee --no-header -c ./test && mocha --exit",
-    "gpr-setup": "node scripts/gpr.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/x42en/IOServer.git"
-  },
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org"
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "dev": "ts-node",
+    "dev:chat": "ts-node examples/chat-app/app.ts",
+    "dev:simple": "ts-node examples/simple-example.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest --testPathPattern=unit",
+    "test:integration": "jest --testPathPattern=integration",
+    "test:e2e": "jest --testPathPattern=e2e",
+    "test:performance": "jest --testPathPattern=performance",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "prepublishOnly": "npm run build && npm run test"
   },
   "keywords": [
     "socket.io",
-    "coffeescript",
-    "webservice",
-    "network",
-    "x42en",
-    "websockets"
+    "fastify",
+    "typescript",
+    "websocket",
+    "server",
+    "framework",
+    "real-time"
   ],
-  "author": "Ben Mz",
+  "author": "Ben Mz <0x42en@users.noreply.github.com>",
   "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/x42en/IOServer/issues"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/ioserver-ts.git"
   },
-  "homepage": "https://github.com/x42en/IOServer#readme",
-  "optionalDependencies": {},
-  "snyk": true
+  "bugs": {
+    "url": "https://github.com/yourusername/ioserver-ts/issues"
+  },
+  "homepage": "https://github.com/yourusername/ioserver-ts#readme",
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.1.0",
+    "@fastify/sensible": "^6.0.3",
+    "fastify": "^5.3.3",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.28.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.15.30",
+    "@types/supertest": "^6.0.2",
+    "@typescript-eslint/eslint-plugin": "^8.33.1",
+    "@typescript-eslint/parser": "^8.33.1",
+    "eslint": "^9.28.0",
+    "jest": "^29.7.0",
+    "socket.io-client": "^4.8.1",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.3.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  }
 }

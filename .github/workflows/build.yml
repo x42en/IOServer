@@ -1,27 +1,70 @@
-name: build
+name: CI Build and Test
+
 on:
   push:
+    branches-ignore:
+      - main
+      - master
+  pull_request:
     branches:
-      - develop
+      - main
+      - master
+
 jobs:
-  build:
-    name: Build and Test package
+  build-test:
+    name: Build and Test
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [16.x, 18.x, 20.x]
+        node-version: [18.x, 20.x, 22.x]
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@master
-      - name: Set up Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@master
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          registry-url: https://npm.pkg.github.com/
-          scope: "@x42en"
-      - run: npm i -g pnpm
-      - run: pnpm install
-      - run: pnpm run build
-      - run: pnpm test
+          cache: "npm"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run linting
+        run: pnpm run lint
+        continue-on-error: true
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Run tests
+        run: pnpm test
         env:
           CI: true
+
+      - name: Upload test coverage
+        uses: codecov/codecov-action@v4
+        if: matrix.node-version == '20.x'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

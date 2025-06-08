@@ -1,45 +1,73 @@
-name: publish
+name: Publish to Registries
+
 on:
   push:
     branches:
+      - main
       - master
+
+env:
+  NODE_VERSION: "20.x"
+  PNPM_VERSION: "9"
+
 jobs:
   build:
-    name: Build and Test package
+    name: Build and Test
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [16.x, 18.x, 20.x]
+        node-version: [18.x, 20.x, 22.x]
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@master
-      - name: Set up Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@master
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          registry-url: https://npm.pkg.github.com/
-          scope: "@x42en"
-      - run: npm i -g pnpm
-      - run: pnpm install
-      - run: pnpm run build
-      - run: pnpm test
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Run tests
+        run: pnpm test
         env:
           CI: true
 
   publish:
     name: Publish to NPM & GitHub Package Registry
     runs-on: ubuntu-latest
-    if: contains(
-      'refs/heads/master
-      refs/heads/develop'
-      , github.ref) # Publish it only if the push comes from the master or develop branch
-    needs: build # We need to wait for the build to be committed before publishing
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@master
+        uses: actions/checkout@v4
         with:
-          ref: master
+          fetch-depth: 0
 
       - name: Check version changes
         uses: EndBug/version-check@v2
@@ -50,59 +78,70 @@ jobs:
 
       - name: Version update detected
         if: steps.check.outputs.changed == 'true'
-        run: 'echo "Version change found! New version: ${{ steps.check.outputs.version }} (${{ steps.check.outputs.type }})"'
+        run: echo "Version change found! New version:${{ steps.check.outputs.version }} (${{ steps.check.outputs.type }})"
 
-      - name: Push tag version
+      - name: Setup Node.js for publishing
         if: steps.check.outputs.changed == 'true'
-        uses: mathieudutour/github-tag-action@v5
+        uses: actions/setup-node@v4
         with:
-          custom_tag: ${{ steps.check.outputs.version }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create a GitHub release
-        if: steps.check.outputs.changed == 'true'
-        uses: actions/create-release@master
-        with:
-          tag_name: ${{ steps.check.outputs.version }}
-          release_name: Release ${{ steps.check.outputs.version }}
-          body: ${{ steps.tag_version.outputs.changelog }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Node.js for NPM
-        if: steps.check.outputs.changed == 'true'
-        uses: actions/setup-node@master
-        with:
+          node-version: ${{ env.NODE_VERSION }}
           registry-url: "https://registry.npmjs.org"
-          scope: "@x62en"
 
-      - name: Install PNPM
+      - name: Install pnpm
         if: steps.check.outputs.changed == 'true'
-        run: npm i -g pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
 
       - name: Install dependencies
         if: steps.check.outputs.changed == 'true'
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Publish package to NPM
+      - name: Build project
         if: steps.check.outputs.changed == 'true'
-        run: pnpm publish --no-git-checks
+        run: pnpm run build
+
+      - name: Create Git tag
+        if: steps.check.outputs.changed == 'true'
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          custom_tag: ${{ steps.check.outputs.version }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag_prefix: "v"
+
+      - name: Create GitHub release
+        if: steps.check.outputs.changed == 'true'
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          tag: v${{ steps.check.outputs.version }}
+          name: Release v${{ steps.check.outputs.version }}
+          generateReleaseNotes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to NPM
+        if: steps.check.outputs.changed == 'true'
+        run: pnpm publish --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
 
-      - name: Set up Node.js for GPR
+      - name: Setup Node.js for GitHub Packages
         if: steps.check.outputs.changed == 'true'
-        uses: actions/setup-node@master
+        uses: actions/setup-node@v4
         with:
+          node-version: ${{ env.NODE_VERSION }}
           registry-url: "https://npm.pkg.github.com/"
           scope: "@x42en"
 
-      - name: Set up package for GPR
+      - name: Prepare package for GitHub Packages
         if: steps.check.outputs.changed == 'true'
         run: pnpm run gpr-setup
 
-      - name: Publish package to GPR
+      - name: Publish to GitHub Packages
         if: steps.check.outputs.changed == 'true'
-        run: pnpm publish --no-git-checks
+        run: pnpm publish --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

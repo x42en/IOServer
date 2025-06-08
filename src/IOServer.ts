@@ -1,5 +1,16 @@
+/**
+ * @fileoverview IOServer - A TypeScript framework for building real-time applications
+ * with Socket.IO and Fastify integration. Provides modular architecture with
+ * Services, Controllers, Managers, and Watchers.
+ *
+ * @author Ben Mz <0x42en@users.noreply.github.com>
+ * @version 2.0.0
+ * @since 1.0.0
+ */
+
 import * as fs from 'fs';
 import * as path from 'path';
+import { setTimeout } from 'timers/promises';
 import fastify, {
   FastifyInstance,
   FastifyRequest,
@@ -18,65 +29,146 @@ declare module 'fastify' {
   }
 }
 
+/**
+ * Configuration options for IOServer instance
+ * @interface IOServerOptions
+ */
 export interface IOServerOptions {
+  /** Logging verbosity level - defaults to 'ERROR' */
   verbose?: LogLevel;
+  /** Server hostname - defaults to 'localhost' */
   host?: string;
+  /** Server port number - defaults to 8080 */
   port?: number;
+  /** Enable Socket.IO cookies - defaults to false */
   cookie?: boolean;
+  /** Transport modes for Socket.IO - defaults to ['websocket', 'polling'] */
   mode?: TransportMode | TransportMode[];
+  /** CORS configuration options */
   cors?: any;
+  /** Path to routes directory - defaults to './routes' */
   routes?: string;
 }
 
+/**
+ * Configuration options for registering a Service
+ * @interface ServiceOptions
+ */
 export interface ServiceOptions {
+  /** Service namespace (optional, defaults to '/') */
   name?: string;
+  /** Service class constructor that extends BaseService */
   service: new (appHandle: AppHandle) => any;
+  /** Array of middleware classes to apply to this service */
   middlewares?: (new () => any)[];
 }
 
+/**
+ * Configuration options for registering a Controller
+ * @interface ControllerOptions
+ */
 export interface ControllerOptions {
+  /** Controller name that matches the route file name */
   name: string;
+  /** Controller class constructor that extends BaseController */
   controller: new (appHandle: AppHandle) => any;
+  /** Array of middleware classes to apply to this controller */
   middlewares?: (new () => any)[];
+  /** URL prefix for all routes in this controller */
   prefix?: string;
 }
 
+/**
+ * Configuration options for registering a Manager
+ * @interface ManagerOptions
+ */
 export interface ManagerOptions {
+  /** Manager name (used as property name in appHandle) */
   name: string;
+  /** Manager class constructor that extends BaseManager */
   manager: new (appHandle: AppHandle) => any;
 }
 
+/**
+ * Configuration options for registering a Watcher
+ * @interface WatcherOptions
+ */
 export interface WatcherOptions {
+  /** Watcher name for identification */
   name: string;
+  /** Watcher class constructor that extends BaseWatcher */
   watcher: new (appHandle: AppHandle) => any;
 }
 
+/**
+ * Options for sending real-time messages to clients
+ * @interface SendToOptions
+ */
 export interface SendToOptions {
+  /** Target namespace (optional, defaults to '/') */
   namespace?: string;
+  /** Event name to emit */
   event: string;
+  /** Data payload to send */
   data: any;
+  /** Target specific room (optional) */
   room?: string;
+  /** Target specific socket ID (optional) */
   sid?: string;
 }
 
+/**
+ * Application handle providing shared functionality across all components
+ * @interface AppHandle
+ */
 export interface AppHandle {
+  /** Function to send real-time messages to clients */
   send: (options: SendToOptions) => boolean;
+  /** Logging function with level-based filtering */
   log: (level: number, text: string) => void;
+  /** Current logging verbosity level */
   verbose: LogLevel;
-  [key: string]: any; // For managers
+  /** Dynamic properties for registered managers */
+  [key: string]: any;
 }
 
+/**
+ * Log levels for controlling verbosity of output
+ */
 export type LogLevel =
-  | 'EMERGENCY'
-  | 'ALERT'
-  | 'CRITICAL'
-  | 'ERROR'
-  | 'WARNING'
-  | 'NOTIFICATION'
-  | 'INFORMATION'
-  | 'DEBUG';
+  | 'EMERGENCY' // Level 0 - System is unusable
+  | 'ALERT' // Level 1 - Action must be taken immediately
+  | 'CRITICAL' // Level 2 - Critical conditions
+  | 'ERROR' // Level 3 - Error conditions
+  | 'WARNING' // Level 4 - Warning conditions
+  | 'NOTIFICATION' // Level 5 - Normal but significant condition
+  | 'INFORMATION' // Level 6 - Informational messages
+  | 'DEBUG'; // Level 7 - Debug-level messages
+
+/**
+ * Transport modes supported by Socket.IO
+ */
 export type TransportMode = 'websocket' | 'polling';
 
+/**
+ * Main IOServer class - A framework for building real-time applications
+ *
+ * Combines Fastify HTTP server with Socket.IO for WebSocket support,
+ * providing a modular architecture with Services, Controllers, Managers, and Watchers.
+ *
+ * @example
+ * ```typescript
+ * const server = new IOServer({
+ *   host: 'localhost',
+ *   port: 3000,
+ *   verbose: 'INFO'
+ * });
+ *
+ * server.addService({ service: ChatService });
+ * server.addController({ name: 'api', controller: ApiController });
+ * await server.start();
+ * ```
+ */
 export class IOServer {
   private static readonly VERSION = '2.0.0';
   private static readonly DEFAULT_PORT = 8080;
@@ -112,6 +204,10 @@ export class IOServer {
   private readonly controllerLists: Map<string, any> = new Map();
   private readonly middlewareLists: Map<string, any[]> = new Map();
 
+  /**
+   * Creates a new IOServer instance
+   * @param {IOServerOptions} options - Configuration options for the server
+   */
   constructor(options: IOServerOptions = {}) {
     this.host = options.host || IOServer.DEFAULT_HOST;
     this.port = this.validatePort(options.port || IOServer.DEFAULT_PORT);
@@ -356,6 +452,11 @@ export class IOServer {
     return this.unique(result).sort();
   }
 
+  /**
+   * Registers a watcher component for background tasks
+   * @param {WatcherOptions} options - Watcher configuration options
+   * @throws {IOServerError} When watcher instantiation fails
+   */
   public addWatcher(options: WatcherOptions): void {
     try {
       this.registerInternalClass('watcher', options.name, options.watcher);
@@ -367,6 +468,11 @@ export class IOServer {
     }
   }
 
+  /**
+   * Registers a manager component for shared functionality
+   * @param {ManagerOptions} options - Manager configuration options
+   * @throws {IOServerError} When manager instantiation fails
+   */
   public addManager(options: ManagerOptions): void {
     try {
       this.registerInternalClass('manager', options.name, options.manager);
@@ -378,6 +484,11 @@ export class IOServer {
     }
   }
 
+  /**
+   * Registers a service component for real-time WebSocket handling
+   * @param {ServiceOptions} options - Service configuration options
+   * @throws {IOServerError} When service instantiation fails
+   */
   public addService(options: ServiceOptions): void {
     const name = options.name || '/';
 
@@ -394,6 +505,11 @@ export class IOServer {
     this.middlewareLists.set(name, options.middlewares || []);
   }
 
+  /**
+   * Registers a controller component for HTTP route handling
+   * @param {ControllerOptions} options - Controller configuration options
+   * @throws {IOServerError} When controller instantiation or route loading fails
+   */
   public addController(options: ControllerOptions): void {
     const middlewares = options.middlewares || [];
     let prefix = options.prefix;
@@ -505,10 +621,21 @@ export class IOServer {
     });
   }
 
+  /**
+   * Retrieves a registered service by name
+   * @param {string} name - The service name
+   * @returns {any} The service instance or undefined if not found
+   */
   public getService(name: string): any {
     return this.serviceLists.get(name);
   }
 
+  /**
+   * Starts the IOServer instance
+   * Initializes Socket.IO, starts watchers, and begins listening for connections
+   * @returns {Promise<void>} Promise that resolves when server is started
+   * @throws {IOServerError} When server startup fails
+   */
   public async start(): Promise<void> {
     const now = new Date();
     const timestamp = now.toISOString();
@@ -527,12 +654,11 @@ export class IOServer {
 
     // Ensure Fastify is ready and Socket.IO is initialized
     await this.webapp.ready();
-
     // Wait for Socket.IO to be properly initialized
     let retries = 0;
     const maxRetries = 10;
     while (!this.socketio && retries < maxRetries) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await setTimeout(100);
       retries++;
     }
 
@@ -603,18 +729,35 @@ export class IOServer {
     }
   }
 
+  /**
+   * Gets the server hostname
+   * @returns {string} The server hostname
+   */
   public getHost(): string {
     return this.host;
   }
 
+  /**
+   * Gets the server port number
+   * @returns {number} The server port
+   */
   public getPort(): number {
     return this.port;
   }
 
+  /**
+   * Gets the Fastify instance
+   * @returns {FastifyInstance} The Fastify application instance
+   */
   public getApp(): FastifyInstance {
     return this.webapp;
   }
 
+  /**
+   * Stops the IOServer instance
+   * @returns {Promise<void>} Promise that resolves when server is stopped
+   * @throws {IOServerError} When server shutdown fails
+   */
   public async stop(): Promise<void> {
     try {
       await this.webapp.close();
@@ -624,6 +767,11 @@ export class IOServer {
     }
   }
 
+  /**
+   * Sends real-time messages to connected clients
+   * @param {SendToOptions} options - Options for message delivery
+   * @returns {boolean} True if message was sent successfully, false otherwise
+   */
   public sendTo(options: SendToOptions): boolean {
     if (!this.socketio) {
       this.log(3, '[!] Socket.IO not initialized, cannot send message');
@@ -655,12 +803,18 @@ export class IOServer {
     return true;
   }
 
+  /**
+   * Handles new WebSocket connections for a specific service
+   * @private
+   * @param {string} serviceName - The name of the service
+   * @returns {Function} Connection handler function
+   */
   private handleConnection(serviceName: string) {
     return (socket: any) => {
       this.log(5, `[*] Received connection for service ${serviceName}`);
 
       const methods = this.methodLists.get(serviceName) || [];
-      const service = this.serviceLists.get(serviceName);
+      this.serviceLists.get(serviceName);
 
       methods.forEach(method => {
         // Skip private methods and constructor
@@ -674,8 +828,16 @@ export class IOServer {
     };
   }
 
+  /**
+   * Creates a callback handler for WebSocket method calls
+   * @private
+   * @param {string} serviceName - The name of the service
+   * @param {string} methodName - The name of the method
+   * @param {any} socket - The Socket.IO socket instance
+   * @returns {Function} Callback handler function
+   */
   private handleCallback(serviceName: string, methodName: string, socket: any) {
-    return async (data: any, callback?: Function) => {
+    return async (data: any, callback?: (response: any) => void) => {
       this.log(6, `[*] Call method ${methodName} of service ${serviceName}`);
 
       try {

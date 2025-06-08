@@ -20,7 +20,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "docs:build": "cd docs && make html",
-    "docs:api": "typedoc src/index.ts --out docs/source/_static/api --theme default --readme none --hideGenerator",
+    "docs:api": "typedoc --options typedoc.json",
+    "docs:serve": "cd docs/build/html && python -m http.server 8000",
     "prepublishOnly": "npm run build && npm run test"
   },
   "keywords": [

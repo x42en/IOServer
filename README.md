@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/ioserver.svg)](https://badge.fury.io/js/ioserver)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Node.js CI](https://github.com/x42en/IOServer/workflows/Node.js%20CI/badge.svg)](https://github.com/x42en/IOServer/actions)
-[![Coverage Status](https://coveralls.io/repos/github/x42en/IOServer/badge.svg?branch=main)](https://coveralls.io/github/x42en/IOServer?branch=main)
+[![codecov](https://codecov.io/gh/x42en/IOServer/branch/main/graph/badge.svg)](https://codecov.io/gh/x42en/IOServer)
 [![TypeScript](https://img.shields.io/badge/TypeScript-4.9+-blue.svg)](https://www.typescriptlang.org/)
 
 **A powerful, production-ready framework for building real-time applications with HTTP and WebSocket support.**

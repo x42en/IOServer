@@ -4,7 +4,7 @@
  * Services, Controllers, Managers, and Watchers.
  *
  * @author Ben Mz <0x42en@users.noreply.github.com>
- * @version 2.0.0
+ * @version 2.0.4
  * @since 1.0.0
  */
 
@@ -35,7 +35,7 @@ declare module 'fastify' {
  */
 export interface IOServerOptions {
   /** Logging verbosity level - defaults to 'ERROR' */
-  verbose?: LogLevel;
+  verbose?: string;
   /** Server hostname - defaults to 'localhost' */
   host?: string;
   /** Server port number - defaults to 8080 */
@@ -371,7 +371,7 @@ export class IOServer {
     }
   }
 
-  private log(level: number, text: string): void {
+  public log(level: number, text: string): void {
     const currentLevel = IOServer.LOG_LEVELS.indexOf(this.verbose);
 
     if (level <= currentLevel) {

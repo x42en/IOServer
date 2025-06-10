@@ -170,7 +170,7 @@ export type TransportMode = 'websocket' | 'polling';
  * ```
  */
 export class IOServer {
-  private static readonly VERSION = '2.0.0';
+  private static readonly VERSION = '2.0.4';
   private static readonly DEFAULT_PORT = 8080;
   private static readonly DEFAULT_HOST = 'localhost';
   private static readonly LOG_LEVELS: LogLevel[] = [
@@ -760,6 +760,29 @@ export class IOServer {
    */
   public async stop(): Promise<void> {
     try {
+      // Stop watchers
+      const watcherPromises = Array.from(this.watcherLists.values()).map(
+        async watcher => {
+          try {
+            this.log(6, `[*] Stopping watcher ${watcher.constructor.name}`);
+            if (watcher.stop) {
+              await watcher.stop();
+            }
+          } catch (error) {
+            this.log(
+              3,
+              `[!] Error stopping ${watcher.constructor.name} watcher: ${error}`
+            );
+            throw new IOServerError(
+              `Error stopping ${watcher.constructor.name} watcher: ${error}`,
+              500
+            );
+          }
+        }
+      );
+      await Promise.all(watcherPromises);
+      this.log(6, '[*] All watchers stopped');
+      // Stop Socket.IO server
       await this.webapp.close();
       this.log(6, '[*] Server stopped');
     } catch (error) {

@@ -1,35 +1,48 @@
-import { BaseWatcher } from "../../../src";
+import { BaseWatcher } from '../../../src';
 
 export class ChatWatcher extends BaseWatcher {
   private readonly CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutes
   private readonly STATS_INTERVAL = 5 * 60 * 1000; // 5 minutes
   private readonly MAX_MESSAGES_PER_ROOM = 1000;
+  private intervals: NodeJS.Timeout[] = [];
 
   async watch(): Promise<void> {
-    this.appHandle.log(6, "ChatWatcher started");
+    this.appHandle.log(6, 'ChatWatcher started');
 
     // Start periodic cleanup
-    setInterval(() => {
-      this.cleanupOldMessages();
-    }, this.CLEANUP_INTERVAL);
+    this.intervals.push(
+      setInterval(() => {
+        this.cleanupOldMessages();
+      }, this.CLEANUP_INTERVAL)
+    );
 
     // Start periodic stats logging
-    setInterval(() => {
-      this.logStats();
-    }, this.STATS_INTERVAL);
+    this.intervals.push(
+      setInterval(() => {
+        this.logStats();
+      }, this.STATS_INTERVAL)
+    );
 
     // Start health monitoring
-    setInterval(() => {
-      this.monitorHealth();
-    }, 60000); // Every minute
+    this.intervals.push(
+      setInterval(() => {
+        this.monitorHealth();
+      }, 60000)
+    ); // Every minute
+  }
+
+  stop(): void {
+    this.intervals.forEach(interval => clearInterval(interval));
+    this.intervals = [];
+    this.appHandle.log(6, 'ChatWatcher stopped');
   }
 
   private cleanupOldMessages(): void {
-    this.appHandle.log(6, "Running message cleanup...");
+    this.appHandle.log(6, 'Running message cleanup...');
 
     // This would typically clean up old messages from the chat service
     // For now, we'll just log the action
-    this.appHandle.log(6, "Message cleanup completed");
+    this.appHandle.log(6, 'Message cleanup completed');
   }
 
   private logStats(): void {

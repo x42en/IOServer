@@ -243,6 +243,14 @@ export abstract class BaseWatcher {
    * @returns {Promise<void>} Promise that resolves when watcher is started
    */
   abstract watch(): Promise<void>;
+
+  /**
+   * Abstract method that must be implemented by watchers
+   * This method is called when the server stops
+   * @abstract
+   * @returns {void} Return when watcher is stopped
+   */
+  abstract stop(): void;
 }
 
 /**

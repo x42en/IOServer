@@ -12,7 +12,7 @@
  * - Production-ready with security best practices
  *
  * @author Ben Mz <0x42en@users.noreply.github.com>
- * @version 2.0.4
+ * @version 2.0.5
  * @since 1.0.0
  *
  * @example

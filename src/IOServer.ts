@@ -4,7 +4,7 @@
  * Services, Controllers, Managers, and Watchers.
  *
  * @author Ben Mz <0x42en@users.noreply.github.com>
- * @version 2.0.5
+ * @version 2.0.6
  * @since 1.0.0
  */
 
@@ -170,7 +170,7 @@ export type TransportMode = 'websocket' | 'polling';
  * ```
  */
 export class IOServer {
-  private static readonly VERSION = '2.0.5';
+  private static readonly VERSION = '2.0.6';
   private static readonly DEFAULT_PORT = 8080;
   private static readonly DEFAULT_HOST = 'localhost';
   private static readonly LOG_LEVELS: LogLevel[] = [
@@ -420,6 +420,12 @@ export class IOServer {
       // Register managers immediatly
       if (type === 'manager') {
         this.appHandle[name] = instance;
+        // Auto-load async start method if it exists
+        if (typeof instance.start === 'function') {
+          instance.start().catch((error: any) => {
+            this.log(3, `[!] Error starting ${name} manager: ${error}`);
+          });
+        }
       }
     } catch (error) {
       throw new IOServerError(`Error instantiating ${type}: ${error}`, 500);

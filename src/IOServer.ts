@@ -4,7 +4,7 @@
  * Services, Controllers, Managers, and Watchers.
  *
  * @author Ben Mz <0x42en@users.noreply.github.com>
- * @version 2.0.4
+ * @version 2.0.5
  * @since 1.0.0
  */
 
@@ -170,7 +170,7 @@ export type TransportMode = 'websocket' | 'polling';
  * ```
  */
 export class IOServer {
-  private static readonly VERSION = '2.0.0';
+  private static readonly VERSION = '2.0.5';
   private static readonly DEFAULT_PORT = 8080;
   private static readonly DEFAULT_HOST = 'localhost';
   private static readonly LOG_LEVELS: LogLevel[] = [
@@ -417,9 +417,22 @@ export class IOServer {
       this.log(7, `[*] Register ${type} ${name}`);
       const instance = new ClassConstructor(this.appHandle);
       listMap.set(name, instance);
+      // Register managers immediatly
+      if (type === 'manager') {
+        this.appHandle[name] = instance;
+      }
     } catch (error) {
       throw new IOServerError(`Error instantiating ${type}: ${error}`, 500);
     }
+  }
+
+  public isRegistered(type: string, name: string): boolean {
+    if (!name) {
+      throw new IOServerError('Name is mandatory', 400);
+    }
+
+    const listMap = this.getListMap(type);
+    return listMap.has(name);
   }
 
   private getListMap(type: string): Map<string, any> {
@@ -646,12 +659,6 @@ export class IOServer {
     );
     this.log(5, `################### ${timestamp} ###################`);
 
-    // Register managers in appHandle
-    this.managerLists.forEach((manager, name) => {
-      this.log(6, `[*] Register ${name} manager`);
-      this.appHandle[name] = manager;
-    });
-
     // Ensure Fastify is ready and Socket.IO is initialized
     await this.webapp.ready();
     // Wait for Socket.IO to be properly initialized
@@ -760,6 +767,29 @@ export class IOServer {
    */
   public async stop(): Promise<void> {
     try {
+      // Stop watchers
+      const watcherPromises = Array.from(this.watcherLists.values()).map(
+        async watcher => {
+          try {
+            this.log(6, `[*] Stopping watcher ${watcher.constructor.name}`);
+            if (watcher.stop) {
+              await watcher.stop();
+            }
+          } catch (error) {
+            this.log(
+              3,
+              `[!] Error stopping ${watcher.constructor.name} watcher: ${error}`
+            );
+            throw new IOServerError(
+              `Error stopping ${watcher.constructor.name} watcher: ${error}`,
+              500
+            );
+          }
+        }
+      );
+      await Promise.all(watcherPromises);
+      this.log(6, '[*] All watchers stopped');
+      // Stop Socket.IO server
       await this.webapp.close();
       this.log(6, '[*] Server stopped');
     } catch (error) {

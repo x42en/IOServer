@@ -80,6 +80,18 @@ describe('IOServer Unit Tests', () => {
       }
     }
 
+    class TestManagerAfter extends BaseManager {
+      constructor(appHandle: any) {
+        super(appHandle);
+        if (!this.appHandle.testManager) {
+          throw new Error('TestManager not accessible');
+        }
+      }
+      getValue() {
+        return 'manager-after-value';
+      }
+    }
+
     class TestWatcher extends BaseWatcher {
       private intervalId: NodeJS.Timeout | null = null;
       async watch() {
@@ -145,6 +157,19 @@ describe('IOServer Unit Tests', () => {
       expect(() => {
         server.addController({ name: 'test', controller: TestController });
       }).toThrow('Sorry this controller already exists');
+    });
+
+    it('should accept manager with after method', () => {
+      server.addManager({
+        name: 'testManager',
+        manager: TestManager,
+      });
+      expect(() => {
+        server.addManager({
+          name: 'testManagerAfter',
+          manager: TestManagerAfter,
+        });
+      }).not.toThrow();
     });
   });
 

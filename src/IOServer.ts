@@ -417,9 +417,22 @@ export class IOServer {
       this.log(7, `[*] Register ${type} ${name}`);
       const instance = new ClassConstructor(this.appHandle);
       listMap.set(name, instance);
+      // Register managers immediatly
+      if (type === 'manager') {
+        this.appHandle[name] = instance;
+      }
     } catch (error) {
       throw new IOServerError(`Error instantiating ${type}: ${error}`, 500);
     }
+  }
+
+  public isRegistered(type: string, name: string): boolean {
+    if (!name) {
+      throw new IOServerError('Name is mandatory', 400);
+    }
+
+    const listMap = this.getListMap(type);
+    return listMap.has(name);
   }
 
   private getListMap(type: string): Map<string, any> {
@@ -645,12 +658,6 @@ export class IOServer {
       `################### IOServer v${IOServer.VERSION} ###################`
     );
     this.log(5, `################### ${timestamp} ###################`);
-
-    // Register managers in appHandle
-    this.managerLists.forEach((manager, name) => {
-      this.log(6, `[*] Register ${name} manager`);
-      this.appHandle[name] = manager;
-    });
 
     // Ensure Fastify is ready and Socket.IO is initialized
     await this.webapp.ready();

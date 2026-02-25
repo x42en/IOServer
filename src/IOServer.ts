@@ -20,6 +20,7 @@ import fastify, {
 import { Server as SocketIOServer } from 'socket.io';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
+import fastifyStatic from '@fastify/static';
 import { IOServerError } from './IOServerError';
 
 // Extend Fastify instance to include Socket.IO
@@ -48,6 +49,21 @@ export interface IOServerOptions {
   cors?: any;
   /** Path to routes directory - defaults to './routes' */
   routes?: string;
+  /**
+   * Absolute path to the directory containing static files to serve (e.g. a
+   * built SPA). When provided and the directory exists, IOServer registers
+   * \@fastify/static with that root and serves files at prefix "/".
+   * If the directory does not exist a warning is logged and static serving
+   * is silently disabled (safe to always set in code, even in dev).
+   */
+  rootDir?: string;
+  /**
+   * When true (default) and rootDir is active, any request that does not
+   * match an API route or a static file is answered with `index.html` so
+   * that client-side routers (Vue Router, React Router, …) work correctly.
+   * Set to false to keep the standard 404 JSON response instead.
+   */
+  spaFallback?: boolean;
 }
 
 /**
@@ -170,7 +186,7 @@ export type TransportMode = 'websocket' | 'polling';
  * ```
  */
 export class IOServer {
-  private static readonly VERSION = '2.0.6';
+  private static readonly VERSION = '2.1.0';
   private static readonly DEFAULT_PORT = 8080;
   private static readonly DEFAULT_HOST = 'localhost';
   private static readonly LOG_LEVELS: LogLevel[] = [
@@ -193,6 +209,8 @@ export class IOServer {
   private readonly port: number;
   private readonly verbose: LogLevel;
   private readonly routesPath: string;
+  private readonly rootDir: string | undefined;
+  private readonly spaFallback: boolean;
   private readonly webapp: FastifyInstance;
   private socketio!: SocketIOServer;
   private readonly appHandle: AppHandle;
@@ -219,12 +237,29 @@ export class IOServer {
         ? options.routes
         : defaultRoutes;
 
+    // Static files directory — silently disabled when the path does not exist
+    if (options.rootDir) {
+      if (fs.existsSync(options.rootDir)) {
+        this.rootDir = options.rootDir;
+      } else {
+        this.log(
+          4,
+          `[!] Static files directory not found, static serving disabled: ${options.rootDir}`
+        );
+        this.rootDir = undefined;
+      }
+    } else {
+      this.rootDir = undefined;
+    }
+    // spaFallback defaults to true whenever rootDir is active
+    this.spaFallback = options.spaFallback !== false;
+
     const transportModes = this.processTransportModes(options.mode);
     const corsOptions = this.processCorsOptions(options.cors);
     const cookieEnabled = Boolean(options.cookie);
 
     this.webapp = this.initializeFastify();
-    this.setupPlugins(corsOptions);
+    this.setupPlugins(corsOptions, this.rootDir, this.spaFallback);
     this.setupSocketIO(transportModes, cookieEnabled, corsOptions);
 
     this.appHandle = {
@@ -297,7 +332,11 @@ export class IOServer {
     }
   }
 
-  private setupPlugins(corsOptions: any): void {
+  private setupPlugins(
+    corsOptions: any,
+    rootDir?: string,
+    spaFallback: boolean = true
+  ): void {
     try {
       // Register sensible plugin for HTTP shortcuts
       this.webapp.register(sensible);
@@ -309,14 +348,33 @@ export class IOServer {
         optionsSuccessStatus: 204, // For CORS preflight requests
       });
 
-      // Add 404 handler
-      this.webapp.setNotFoundHandler((request, reply) => {
-        reply.code(404).send({
-          statusCode: 404,
-          error: 'Not Found',
-          message: `Route ${request.method}:${request.url} not found`,
+      // Register @fastify/static when a rootDir was supplied and validated
+      if (rootDir) {
+        this.webapp.register(fastifyStatic, {
+          root: rootDir,
+          prefix: '/',
+          // Do not decorate reply a second time if already done (e.g. tests)
+          decorateReply: true,
         });
-      });
+        this.log(6, `[*] Serving static files from: ${rootDir}`);
+      }
+
+      // 404 handler — SPA fallback when rootDir is active, generic JSON otherwise
+      if (rootDir && spaFallback) {
+        // Serve index.html for any unmatched route so client-side routers work.
+        // Registered API routes (controllers) always take priority in Fastify.
+        this.webapp.setNotFoundHandler((_request, reply) => {
+          reply.sendFile('index.html');
+        });
+      } else {
+        this.webapp.setNotFoundHandler((request, reply) => {
+          reply.code(404).send({
+            statusCode: 404,
+            error: 'Not Found',
+            message: `Route ${request.method}:${request.url} not found`,
+          });
+        });
+      }
 
       // Setup error handler
       this.webapp.setErrorHandler(

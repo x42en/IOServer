@@ -4,7 +4,7 @@
  * Services, Controllers, Managers, and Watchers.
  *
  * @author Ben Mz <0x42en@users.noreply.github.com>
- * @version 2.0.6
+ * @version 2.1.1
  * @since 1.0.0
  */
 
@@ -186,7 +186,7 @@ export type TransportMode = 'websocket' | 'polling';
  * ```
  */
 export class IOServer {
-  private static readonly VERSION = '2.1.0';
+  private static readonly VERSION = '2.1.1';
   private static readonly DEFAULT_PORT = 8080;
   private static readonly DEFAULT_HOST = 'localhost';
   private static readonly LOG_LEVELS: LogLevel[] = [

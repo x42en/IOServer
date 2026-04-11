@@ -50,10 +50,19 @@ class SimpleManager extends BaseManager {
 
 // Example Watcher
 class SimpleWatcher extends BaseWatcher {
+  private intervalId: ReturnType<typeof setInterval> | null = null;
+
   async watch(): Promise<void> {
-    setInterval(() => {
+    this.intervalId = setInterval(() => {
       this.appHandle.log(6, "Simple watcher is running...");
     }, 30000); // Every 30 seconds
+  }
+
+  stop(): void {
+    if (this.intervalId !== null) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
   }
 }
 

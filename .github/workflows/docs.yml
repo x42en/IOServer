@@ -1,4 +1,4 @@
-name: Generate Documentation
+name: Deploy Documentation
 
 on:
   push:
@@ -8,75 +8,38 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: 'pages'
-  cancel-in-progress: false
+  packages: write
 
 jobs:
-  build-docs:
+  build-push:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          fetch-depth: 0
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
         with:
-          python-version: '3.12'
-
-      - name: Install documentation dependencies
-        run: |
-          pip install --upgrade pip
-          pip install sphinx sphinx-rtd-theme myst-parser sphinx-autodoc-typehints linkify-it-py
-
-      - name: Setup Node.js for TypeScript docs
-        uses: actions/setup-node@v6
-        with:
-          node-version: '22.x'
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
-
-      - name: Install project dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build TypeScript project
-        run: pnpm run build
-
-      - name: Generate API documentation
-        run: |
-          npx typedoc src/index.ts --out docs/source/_static/api --theme default --readme none --hideGenerator
-
-      - name: Build documentation
-        run: |
-          cd docs
-          make html
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs/build/html
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build-docs
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          context: ./docs-site
+          file: ./docs-site/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/ioserver-docs:latest
+            ghcr.io/${{ github.repository_owner }}/ioserver-docs:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NUXT_APP_BASE_URL=/ioserver/
+            NUXT_SITE_URL=https://docs.circle-cyber.com/ioserver

@@ -1,266 +1,424 @@
-# 🚀 IOServer
+# IOServer
 
 [![npm version](https://badge.fury.io/js/ioserver.svg)](https://badge.fury.io/js/ioserver)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Node.js CI](https://github.com/x42en/IOServer/workflows/Node.js%20CI/badge.svg)](https://github.com/x42en/IOServer/actions)
+[![CI Build and Test](https://github.com/x42en/IOServer/actions/workflows/build.yml/badge.svg)](https://github.com/x42en/IOServer/actions)
 [![codecov](https://codecov.io/gh/x42en/IOServer/branch/main/graph/badge.svg)](https://codecov.io/gh/x42en/IOServer)
-[![TypeScript](https://img.shields.io/badge/TypeScript-4.9+-blue.svg)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
-**A powerful, production-ready framework for building real-time applications with HTTP and WebSocket support.**
+A TypeScript framework for building real-time applications, combining [Fastify](https://fastify.dev/) (HTTP) and [Socket.IO](https://socket.io/) (WebSocket) behind a single unified API.
 
-IOServer combines the speed of Fastify with the real-time capabilities of Socket.IO, providing a unified architecture for modern web applications. Built with TypeScript and designed for scalability, it offers a clean separation of concerns through services, controllers, managers, and watchers.
+## Overview
 
-## ✨ Features
+IOServer structures your application around five component types — Services, Controllers, Managers, Watchers, and Middlewares — each with a well-defined responsibility. Components are registered on the IOServer instance before startup; the framework wires routing, CORS, and Socket.IO transport automatically.
 
-- 🚄 **High Performance** - Built on Fastify for maximum HTTP throughput
-- ⚡ **Real-time Communication** - Integrated Socket.IO for WebSocket connections
-- 🏗️ **Modular Architecture** - Clean separation with Services, Controllers, Managers, and Watchers
-- 🔒 **Security First** - Built-in CORS, error handling, and validation
-- 📝 **TypeScript Native** - Full type safety and IntelliSense support
-- 🧪 **Fully Tested** - Comprehensive test suite with 95%+ coverage
-- 🔧 **Configuration Driven** - JSON-based routing and flexible configuration
-- 📦 **Production Ready** - Memory leak detection, performance monitoring, and error handling
+It is designed to be small, explicit, and easily testable:
 
-## 🚀 Quick Start
+- No magic decorators or code generation
+- Route definitions are plain JSON files, kept separate from handler logic
+- Managers are injectable singletons available to every component via `AppHandle`
+- All base classes expose a minimal surface; you only override what you need
 
-### Installation
+## Architecture
+
+```mermaid
+graph TB
+    subgraph "Clients"
+        HTTP[HTTP Clients]
+        WS[WebSocket Clients]
+    end
+
+    subgraph "IOServer"
+        direction TB
+        Fastify[Fastify HTTP layer]
+        SocketIO[Socket.IO layer]
+
+        subgraph "Components"
+            MW[Middlewares]
+            CTL[Controllers]
+            SVC[Services]
+            MGR[Managers]
+            WCH[Watchers]
+        end
+    end
+
+    HTTP -->|REST requests| Fastify
+    WS  -->|WS upgrade| SocketIO
+
+    Fastify --> MW
+    SocketIO --> MW
+    MW --> CTL
+    MW --> SVC
+    CTL --> MGR
+    SVC --> MGR
+    WCH --> MGR
+```
+
+## Key Features
+
+- **Unified HTTP + WebSocket** — Fastify v5 and Socket.IO v4 share the same port and TLS configuration
+- **Component model** — Five explicit roles (Service, Controller, Manager, Watcher, Middleware) keep business logic isolated and testable
+- **JSON route files** — HTTP routes are declared in `.json` files; no annotations or meta-programming required
+- **Injectable managers** — Singleton managers are exposed to all components through a typed `AppHandle`, avoiding global state
+- **TypeScript native** — Ships with declaration files; strict mode compatible
+- **CORS built-in** — Pass a standard Fastify CORS options object; applied to both HTTP and Socket.IO handshake
+- **Configurable transports** — Choose `websocket`, `polling`, or both for Socket.IO
+- **SPA fallback** — Optional static file serving with single-page application fallback routing
+
+## Requirements
+
+- Node.js 18+
+- TypeScript 5.0+
+- pnpm (recommended) or npm / yarn
+
+## Installation
 
 ```bash
 npm install ioserver
 # or
-yarn add ioserver
+pnpm add ioserver
 ```
 
-### Basic Usage
+## Quick Start
 
 ```typescript
-import { IOServer, BaseService, BaseController } from 'ioserver';
+import { IOServer, BaseService, BaseController, BaseManager } from 'ioserver';
 
-// Create a service for real-time functionality
+// --- Manager: shared state ---
+class AppManager extends BaseManager {
+  private count = 0;
+  increment() { this.count++; }
+  getCount() { return this.count; }
+}
+
+// --- Service: WebSocket events ---
 class ChatService extends BaseService {
-  async sendMessage(socket: any, data: any, callback?: Function) {
-    // Handle real-time messaging
-    socket.broadcast.emit('new_message', data);
-    if (callback) callback({ status: 'success' });
+  async sendMessage(socket: any, data: { text: string }, callback?: Function) {
+    const mgr = this.app.getManager('app') as AppManager;
+    mgr.increment();
+    socket.broadcast.emit('message', { text: data.text, total: mgr.getCount() });
+    if (callback) callback({ status: 'ok' });
   }
 }
 
-// Create a controller for HTTP endpoints
-class ApiController extends BaseController {
-  async getStatus(request: any, reply: any) {
-    reply.send({ status: 'OK', timestamp: Date.now() });
+// --- Controller: HTTP endpoints ---
+class StatsController extends BaseController {
+  async getStats(request: any, reply: any) {
+    const mgr = this.app.getManager('app') as AppManager;
+    reply.send({ messages: mgr.getCount() });
   }
 }
 
-// Initialize and configure server
-const server = new IOServer({
-  host: 'localhost',
-  port: 3000,
-  cors: {
-    origin: ['http://localhost:3000'],
-    methods: ['GET', 'POST'],
-  },
-});
+// --- Bootstrap ---
+const server = new IOServer({ host: 'localhost', port: 3000 });
 
-// Register components
+server.addManager({ name: 'app', manager: AppManager });
 server.addService({ name: 'chat', service: ChatService });
-server.addController({ name: 'api', controller: ApiController });
+server.addController({ name: 'stats', controller: StatsController });
 
-// Start server
 await server.start();
-console.log('🚀 Server running at http://localhost:3000');
 ```
 
-## 🏗️ Architecture
+> Managers must be registered **before** Services and Controllers so that `AppHandle` references are already populated at startup.
 
-IOServer provides four core component types for building scalable applications:
+## Components
 
-### 📡 **Services** - Real-time Logic
+### Services — WebSocket event handlers
 
-Handle WebSocket connections and real-time events.
+A Service groups Socket.IO event handlers. Each public method of the class is automatically bound to the Socket.IO event `<method_name>`.
 
 ```typescript
-class NotificationService extends BaseService {
-  async notify(socket: any, data: any, callback?: Function) {
-    // Real-time notification logic
-    socket.emit('notification', { message: data.message });
-    if (callback) callback({ delivered: true });
+import { BaseService } from 'ioserver';
+import type { Socket } from 'socket.io';
+
+class RoomService extends BaseService {
+  async join(socket: Socket, data: { room: string }, callback?: Function) {
+    socket.join(data.room);
+    socket.to(data.room).emit('user_joined', { id: socket.id });
+    if (callback) callback({ joined: data.room });
+  }
+
+  async leave(socket: Socket, data: { room: string }) {
+    socket.leave(data.room);
   }
 }
+
+server.addService({ name: 'room', service: RoomService });
 ```
 
-### 🌐 **Controllers** - HTTP Endpoints
+Registration options:
 
-Handle HTTP requests with automatic route mapping from JSON configuration.
+| Option | Type | Description |
+|---|---|---|
+| `name` | `string` | Namespace name (used as Socket.IO namespace `/name`) |
+| `service` | `typeof BaseService` | Service class (not an instance) |
+| `middlewares` | `BaseMiddleware[]` | Optional middleware chain for this namespace |
+
+### Controllers — HTTP route handlers
+
+A Controller groups Fastify route handlers. Routes are mapped through a JSON file located in the `routes/` directory (or the path set in `options.routes`).
 
 ```typescript
+import { BaseController } from 'ioserver';
+import type { FastifyRequest, FastifyReply } from 'fastify';
+
 class UserController extends BaseController {
-  async getUser(request: any, reply: any) {
-    const userId = request.params.id;
-    reply.send({ id: userId, name: 'John Doe' });
+  async getUser(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    reply.send({ id: request.params.id });
+  }
+
+  async createUser(request: FastifyRequest<{ Body: { name: string } }>, reply: FastifyReply) {
+    reply.code(201).send({ id: crypto.randomUUID(), name: request.body.name });
   }
 }
+
+server.addController({ name: 'user', controller: UserController });
 ```
 
-### 🔧 **Managers** - Shared Logic
-
-Provide shared functionality across services and controllers.
-
-```typescript
-class DatabaseManager extends BaseManager {
-  async query(sql: string, params: any[]) {
-    // Database operations
-    return await this.db.query(sql, params);
-  }
-}
-```
-
-### 👀 **Watchers** - Background Tasks
-
-Handle background processes, monitoring, and scheduled tasks.
-
-```typescript
-class HealthWatcher extends BaseWatcher {
-  async watch() {
-    setInterval(() => {
-      // Monitor system health
-      this.checkSystemHealth();
-    }, 30000);
-  }
-}
-```
-
-## 📋 Configuration
-
-### Server Options
-
-```typescript
-const server = new IOServer({
-  host: 'localhost', // Server host
-  port: 3000, // Server port
-  verbose: 'INFO', // Log level
-  routes: './routes', // Route definitions directory
-  cors: {
-    // CORS configuration
-    origin: ['http://localhost:3000'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true,
-  },
-  mode: ['websocket', 'polling'], // Socket.IO transport modes
-});
-```
-
-### Route Configuration
-
-Define HTTP routes in JSON files (e.g., `routes/api.json`):
+Corresponding route file `routes/user.json`:
 
 ```json
 [
-  {
-    "method": "GET",
-    "url": "/users/:id",
-    "handler": "getUser"
-  },
-  {
-    "method": "POST",
-    "url": "/users",
-    "handler": "createUser"
-  }
+  { "method": "GET",  "url": "/users/:id", "handler": "getUser"    },
+  { "method": "POST", "url": "/users",     "handler": "createUser" }
 ]
 ```
 
-## 🧪 Testing
+Registration options:
 
-IOServer includes comprehensive testing utilities and examples:
+| Option | Type | Description |
+|---|---|---|
+| `name` | `string` | Must match the JSON route file basename (`routes/<name>.json`) |
+| `controller` | `typeof BaseController` | Controller class (not an instance) |
+| `middlewares` | `BaseMiddleware[]` | Optional middleware chain for all routes of this controller |
+
+### Managers — Injectable singletons
+
+Managers hold shared state and business logic. They are instantiated once and exposed to every Service, Controller, and Watcher through `this.app`.
+
+```typescript
+import { BaseManager } from 'ioserver';
+
+class CacheManager extends BaseManager {
+  private store = new Map<string, unknown>();
+
+  set(key: string, value: unknown) { this.store.set(key, value); }
+  get(key: string)                 { return this.store.get(key); }
+  has(key: string)                 { return this.store.has(key); }
+}
+
+server.addManager({ name: 'cache', manager: CacheManager });
+
+// In any other component:
+const cache = this.app.getManager('cache') as CacheManager;
+cache.set('session:42', { userId: 42 });
+```
+
+The optional `start()` method is called automatically by the framework after all components are registered and before the server begins accepting connections.
+
+### Watchers — Background tasks
+
+Watchers run independent background loops. Both `watch()` and `stop()` must be implemented.
+
+```typescript
+import { BaseWatcher } from 'ioserver';
+
+class CleanupWatcher extends BaseWatcher {
+  private timer: ReturnType<typeof setInterval> | null = null;
+
+  async watch() {
+    this.timer = setInterval(async () => {
+      const cache = this.app.getManager('cache') as CacheManager;
+      // periodic cleanup logic
+    }, 60_000);
+  }
+
+  stop() {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+}
+
+server.addWatcher({ name: 'cleanup', watcher: CleanupWatcher });
+```
+
+### Middlewares — Request and connection guards
+
+Middlewares intercept HTTP requests (Fastify `preHandler`) and Socket.IO connections before they reach Controllers or Services.
+
+```typescript
+import { BaseMiddleware } from 'ioserver';
+import type { FastifyRequest, FastifyReply } from 'fastify';
+import type { Socket } from 'socket.io';
+
+class AuthMiddleware extends BaseMiddleware {
+  // HTTP guard
+  async handle(request: FastifyRequest, reply: FastifyReply, next: Function) {
+    const token = request.headers.authorization?.split(' ')[1];
+    if (!token || !this.verify(token)) {
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+    next();
+  }
+
+  // WebSocket guard
+  async handleSocket(socket: Socket, next: Function) {
+    const token = socket.handshake.auth?.token;
+    if (!token || !this.verify(token)) {
+      return next(new Error('Unauthorized'));
+    }
+    next();
+  }
+
+  private verify(token: string) { /* JWT verification */ return true; }
+}
+
+// Apply to a specific controller or service
+server.addController({ name: 'admin', controller: AdminController, middlewares: [AuthMiddleware] });
+```
+
+## Configuration
+
+```typescript
+const server = new IOServer(options);
+```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `host` | `string` | `'localhost'` | Bind address |
+| `port` | `number` | `8080` | Listen port |
+| `verbose` | `string` | `'ERROR'` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `cookie` | `boolean` | `false` | Enable Socket.IO cookies |
+| `mode` | `string \| string[]` | `['websocket','polling']` | Socket.IO transport(s) |
+| `cors` | `object` | `undefined` | Fastify CORS options (applied to HTTP and Socket.IO) |
+| `routes` | `string` | `'./routes'` | Directory containing JSON route files |
+| `rootDir` | `string` | `'.'` | Root directory for static file serving |
+| `spaFallback` | `boolean` | `false` | Serve `index.html` for unmatched routes (SPA mode) |
+
+### CORS example
+
+```typescript
+const server = new IOServer({
+  host: '0.0.0.0',
+  port: 8080,
+  cors: {
+    origin: ['https://app.example.com'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+  },
+});
+```
+
+## Testing
 
 ```bash
 # Run all tests
-npm test
+pnpm test
 
-# Test categories
-npm run test:unit        # Unit tests
-npm run test:integration # Integration tests
-npm run test:e2e        # End-to-end tests
-npm run test:performance # Performance tests
+# With coverage report
+pnpm run test:coverage
 
-# Coverage report
-npm run test:coverage
+# Isolated suites
+pnpm run test:unit
+pnpm run test:integration
+pnpm run test:e2e
+pnpm run test:performance
 ```
 
-## 📚 Examples
+Coverage targets: 90% statements, 85% branches, 90% functions.
 
-### Real-time Chat Application
+## Examples
 
-A complete chat application example is included in the `examples/` directory, showcasing:
+### Simple server
 
-- User authentication and management
-- Real-time messaging
-- Room-based conversations
-- Typing indicators
-- Connection management
-- API endpoints for statistics
+`examples/simple.ts` — all five component types in a single file, useful as a project template:
 
 ```bash
-cd examples/chat-app
-npm install
-npm start
+pnpm run dev:simple
 ```
 
-Visit `http://localhost:8080` to see the chat application in action.
+### Chat application
 
-## 🔧 API Reference
+`examples/chat-app/` — a complete multi-room chat server with:
 
-### Core Classes
+- `RoomService` — join/leave/message Socket.IO events
+- `ChatController` — REST endpoints for room history and statistics
+- `StatsManager` — shared counters accessible from both layers
+- `ChatWatcher` — periodic inactive-room cleanup
 
-- **`IOServer`** - Main server class
-- **`BaseService`** - Base class for WebSocket services
-- **`BaseController`** - Base class for HTTP controllers
-- **`BaseManager`** - Base class for shared logic managers
-- **`BaseWatcher`** - Base class for background watchers
-
-### Key Methods
-
-```typescript
-// Server management
-server.addService(options: ServiceOptions)
-server.addController(options: ControllerOptions)
-server.addManager(options: ManagerOptions)
-server.addWatcher(options: WatcherOptions)
-server.start(): Promise<void>
-server.stop(): Promise<void>
-
-// Real-time messaging
-server.sendTo(options: SendToOptions): boolean
+```bash
+pnpm run dev:chat
+# or
+cd examples/chat-app && ts-node app.ts
 ```
 
-## 🤝 Contributing
+Connect at `http://localhost:8080`.
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+## Project Organization
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+```
+ioserver/
+├── src/
+│   ├── IOServer.ts          # Main class — startup, registration, routing
+│   ├── BaseClasses.ts       # BaseService, BaseController, BaseManager,
+│   │                        # BaseWatcher, BaseMiddleware
+│   ├── IOServerError.ts     # Error hierarchy
+│   └── index.ts             # Public exports
+├── examples/
+│   ├── simple.ts            # Minimal example (all component types)
+│   └── chat-app/            # Full chat application
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   ├── e2e/
+│   └── performance/
+├── docs-site/               # Nuxt/Docus documentation site
+├── tsconfig.json
+└── package.json
+```
 
-## 📄 License
+## Docker Deployment
 
-This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details.
+```dockerfile
+FROM node:24-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
 
-## 🙏 Acknowledgments
+FROM node:24-alpine
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json .
+EXPOSE 8080
+CMD ["node", "dist/index.js"]
+```
 
-- Built with [Fastify](https://www.fastify.io/) for high-performance HTTP
-- Powered by [Socket.IO](https://socket.io/) for real-time communication
-- Inspired by modern microservice architectures
+```yaml
+# compose.yml
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
+```
 
-## 📞 Support
+## Related Projects
 
-- 📚 [Documentation](https://github.com/x42en/IOServer/wiki)
-- 🐛 [Issue Tracker](https://github.com/x42en/IOServer/issues)
-- 💬 [Discussions](https://github.com/x42en/IOServer/discussions)
+- [uPKI CA Server](https://github.com/circle-rd/upki-ca) — Certificate Authority built on this framework pattern
+- [uPKI RA Server](https://github.com/circle-rd/upki-ra) — Registration Authority built on this framework pattern
 
----
+## Contributing
 
-<div align="center">
-  <strong>Built with ❤️ for the Node.js community</strong>
-</div>
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, component rules, test strategy, and commit conventions.
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE).

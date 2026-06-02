@@ -1,6 +1,6 @@
 {
   "name": "ioserver",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "description": "Damn simple Fastify & Socket.io server framework with TypeScript support",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -48,6 +48,7 @@
   "files": [
     "dist/**/*",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "engines": {

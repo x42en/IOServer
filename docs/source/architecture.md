@@ -18,7 +18,7 @@ Controllers handle HTTP requests and responses. They map to route definitions an
 **Example:**
 
 ```typescript
-import { BaseController } from '@ioserver/core';
+import { BaseController } from 'ioserver';
 
 class UserController extends BaseController {
   async getUser(request: any, reply: any) {
@@ -49,7 +49,7 @@ Services handle WebSocket connections and real-time events. They provide the cor
 **Example:**
 
 ```typescript
-import { BaseService } from '@ioserver/core';
+import { BaseService } from 'ioserver';
 
 class ChatService extends BaseService {
   async joinRoom(socket: any, data: any, callback?: Function) {
@@ -90,7 +90,7 @@ Managers provide shared functionality that can be accessed by services and contr
 **Example:**
 
 ```typescript
-import { BaseManager } from '@ioserver/core';
+import { BaseManager } from 'ioserver';
 
 class DatabaseManager extends BaseManager {
   private connection: any;
@@ -135,7 +135,7 @@ Watchers handle background processes, monitoring, and scheduled tasks. They run 
 **Example:**
 
 ```typescript
-import { BaseWatcher } from '@ioserver/core';
+import { BaseWatcher } from 'ioserver';
 
 class HealthWatcher extends BaseWatcher {
   async watch() {
@@ -237,7 +237,7 @@ interface AppHandle {
 Middleware can be applied to services and controllers for cross-cutting concerns:
 
 ```typescript
-import { BaseMiddleware } from '@ioserver/core';
+import { BaseMiddleware } from 'ioserver';
 
 class AuthMiddleware extends BaseMiddleware {
   handle(appHandle: any) {
@@ -314,7 +314,7 @@ const adminSocket = io('http://localhost:3000/admin');
 IOServer provides comprehensive error handling:
 
 ```typescript
-import { IOServerError } from '@ioserver/core';
+import { IOServerError } from 'ioserver';
 
 class UserService extends BaseService {
   async createUser(socket: any, data: any, callback?: Function) {

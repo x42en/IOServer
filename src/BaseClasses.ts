@@ -5,7 +5,7 @@
  * for Services, Controllers, Managers, Watchers, and Middlewares in the IOServer framework.
  *
  * @author Ben Mz <0x42en@users.noreply.github.com>
- * @version 2.1.1
+ * @version 2.2.0
  * @since 1.0.0
  */
 

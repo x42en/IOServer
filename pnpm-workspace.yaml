@@ -1,0 +1,3 @@
+allowBuilds:
+  # Native (napi-rs) module resolver pulled by jest-resolve@30. Trusted.
+  unrs-resolver: true

@@ -77,7 +77,7 @@ describe("Chat Application E2E Tests", () => {
         status: "OK",
         timestamp: expect.any(String),
         service: "IOServer Chat App",
-        version: "2.0.0",
+        version: "2.2.0",
       });
     });
 
@@ -88,7 +88,7 @@ describe("Chat Application E2E Tests", () => {
 
       expect(response.body).toHaveProperty("status", "OK");
       expect(response.body).toHaveProperty("service", "IOServer Chat App API");
-      expect(response.body).toHaveProperty("version", "2.0.0");
+      expect(response.body).toHaveProperty("version", "2.2.0");
     });
 
     it("should return chat statistics", async () => {

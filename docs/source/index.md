@@ -32,15 +32,15 @@ IOServer combines the speed of [Fastify](https://www.fastify.io/) with the real-
 ## Installation
 
 ```bash
-npm install @ioserver/core
+npm install ioserver
 # or
-yarn add @ioserver/core
+yarn add ioserver
 ```
 
 ## Quick Start
 
 ```typescript
-import { IOServer, BaseService, BaseController } from '@ioserver/core';
+import { IOServer, BaseService, BaseController } from 'ioserver';
 
 // Create a service for real-time functionality
 class ChatService extends BaseService {

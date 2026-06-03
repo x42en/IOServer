@@ -1,5 +1,5 @@
 import { IOServer } from "../../src/IOServer";
-import { BaseService, BaseController } from "../../src";
+import { BaseService, BaseController, IOServerError } from "../../src";
 const supertest = require("supertest");
 
 describe("IOServer Integration Tests", () => {
@@ -14,6 +14,21 @@ describe("IOServer Integration Tests", () => {
     async echo(socket: any, data: any, callback?: Function): Promise<void> {
       socket.emit("echo_response", data);
       if (callback) callback({ status: "success", data });
+    }
+
+    // Throws an UNEXPECTED error with a sensitive internal message — must be
+    // masked into a generic 500 over the wire.
+    async boom(_socket: any, _data: any, _callback?: Function): Promise<void> {
+      throw new Error("sensitive: db connection string secret");
+    }
+
+    // Throws an INTENTIONAL IOServerError — its message is safe to surface.
+    async boomTyped(
+      _socket: any,
+      _data: any,
+      _callback?: Function
+    ): Promise<void> {
+      throw new IOServerError("Explicit business error", 400);
     }
   }
 
@@ -156,6 +171,44 @@ describe("IOServer Integration Tests", () => {
       client.on("connect_error", (error: any) => {
         done(error);
       });
+    });
+
+    it("masks unexpected service errors with a generic payload", (done) => {
+      const io = require("socket.io-client");
+      const client = io("http://localhost:3003/test");
+
+      client.on("connect", () => {
+        client.emit("boom", {}, (response: any) => {
+          expect(response.status).toBe("error");
+          expect(response.statusCode).toBe(500);
+          expect(response.type).toBe("Error");
+          // The sensitive internal message must NOT leak to the client.
+          expect(response.message).toBe("Internal Server Error");
+          expect(response.message).not.toContain("sensitive");
+          client.disconnect();
+          done();
+        });
+      });
+
+      client.on("connect_error", (error: any) => done(error));
+    });
+
+    it("surfaces intentional IOServerError details to the client", (done) => {
+      const io = require("socket.io-client");
+      const client = io("http://localhost:3003/test");
+
+      client.on("connect", () => {
+        client.emit("boomTyped", {}, (response: any) => {
+          expect(response.status).toBe("error");
+          expect(response.statusCode).toBe(400);
+          expect(response.type).toBe("IOServerError");
+          expect(response.message).toBe("Explicit business error");
+          client.disconnect();
+          done();
+        });
+      });
+
+      client.on("connect_error", (error: any) => done(error));
     });
   });
 

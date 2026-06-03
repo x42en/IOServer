@@ -4,7 +4,7 @@
  * Services, Controllers, Managers, and Watchers.
  *
  * @author Ben Mz <0x42en@users.noreply.github.com>
- * @version 2.1.1
+ * @version 2.2.0
  * @since 1.0.0
  */
 
@@ -186,7 +186,7 @@ export type TransportMode = 'websocket' | 'polling';
  * ```
  */
 export class IOServer {
-  private static readonly VERSION = '2.1.1';
+  private static readonly VERSION = '2.2.0';
   private static readonly DEFAULT_PORT = 8080;
   private static readonly DEFAULT_HOST = 'localhost';
   private static readonly LOG_LEVELS: LogLevel[] = [
@@ -392,10 +392,17 @@ export class IOServer {
               message: error.message,
             });
           } else {
+            // Unhandled internal error: never leak the original message
+            // (stack traces, DB driver details, file paths, …) to the client.
+            // Log the detail server-side and return a generic response.
+            this.log(
+              3,
+              `[!] Unhandled error on ${request.method}:${request.url}: ${error?.stack || error}`
+            );
             reply.status(500).send({
               statusCode: 500,
               error: 'Internal Server Error',
-              message: error.message,
+              message: 'Internal Server Error',
             });
           }
         }
@@ -945,17 +952,29 @@ export class IOServer {
           ioError = new IOServerError(error, 500);
         }
 
-        const payload = {
-          status: 'error',
-          type: (ioError as any)?.constructor?.name || 'Error',
-          message: (ioError as any)?.message || null,
-          statusCode: (ioError as any)?.statusCode || 500,
-        };
-
         this.log(
           5,
-          `Error on ${serviceName}:${methodName} execution: ${error}`
+          `Error on ${serviceName}:${methodName} execution: ${(ioError as any)?.stack || error}`
         );
+
+        // Only surface intentional IOServerError details to the client.
+        // Any other (unexpected) error is reported generically so that
+        // internal information (stack traces, driver/internal messages) does
+        // not leak over the wire.
+        const isIOServerError = ioError instanceof IOServerError;
+        const payload = isIOServerError
+          ? {
+              status: 'error',
+              type: 'IOServerError',
+              message: (ioError as IOServerError).message,
+              statusCode: (ioError as IOServerError).statusCode,
+            }
+          : {
+              status: 'error',
+              type: 'Error',
+              message: 'Internal Server Error',
+              statusCode: 500,
+            };
 
         if (callback) {
           callback(payload);

@@ -6,6 +6,13 @@ export default defineNuxtConfig({
   site: {
     url: process.env.NUXT_SITE_URL ?? "https://docs.circle-cyber.com/ioserver",
   },
+  robots: { robotsTxt: false },
+  meta: {
+    title: "IOServer",
+    description:
+      "TypeScript framework combining Fastify and Socket.IO with a modular component architecture.",
+    ogHost: process.env.NUXT_SITE_URL ?? "https://docs.circle-cyber.com/ioserver",
+  },
   llms: {
     title: "IOServer",
     description:

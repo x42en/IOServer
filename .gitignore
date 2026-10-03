@@ -55,6 +55,7 @@ examples/**/dist/
 examples/**/build/
 
 # Exclude lock files (optional, if not committed)
-# package-lock.json
+# pnpm-lock.yaml is the only committed lockfile; pnpm is the package manager.
+package-lock.json
 yarn.lock
-pnpm-lock.yaml
+# pnpm-lock.yaml

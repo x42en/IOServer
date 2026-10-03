@@ -1,3 +1,6 @@
 allowBuilds:
   # Native (napi-rs) module resolver pulled by jest-resolve@30. Trusted.
   unrs-resolver: true
+  # Optional native watcher pulled by jest-haste-map@30.5; jest falls back to its own
+  # inline watcher, so the postinstall is not needed and is explicitly declined.
+  '@parcel/watcher': false

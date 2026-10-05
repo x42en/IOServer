@@ -4,8 +4,8 @@ import { ChatController } from "../../examples/chat-app/controllers/ChatControll
 import { ApiController } from "../../examples/chat-app/controllers/ApiController";
 import { StatsManager } from "../../examples/chat-app/managers/StatsManager";
 import { ChatWatcher } from "../../examples/chat-app/watchers/ChatWatcher";
-const supertest = require("supertest");
-const io = require("socket.io-client");
+import supertest from "supertest";
+import { io } from "socket.io-client";
 
 describe("Chat Application E2E Tests", () => {
   let server: IOServer;

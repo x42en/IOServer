@@ -55,12 +55,12 @@ describe("IOServerError Unit Tests", () => {
       try {
         throw new IOServerError("Custom error", 422);
       } catch (error) {
-        if (error instanceof IOServerError) {
-          expect(error.message).toBe("Custom error");
-          expect(error.statusCode).toBe(422);
-        } else {
-          fail("Error should be instance of IOServerError");
-        }
+        // Asserts the caught value is an IOServerError before reading its
+        // properties — the explicit expect() replaces the `fail()` helper,
+        // which is a Jasmine global jest-circus does not provide.
+        expect(error).toBeInstanceOf(IOServerError);
+        expect((error as IOServerError).message).toBe("Custom error");
+        expect((error as IOServerError).statusCode).toBe(422);
       }
     });
   });

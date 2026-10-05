@@ -1,24 +1,37 @@
 import { IOServer } from "../../src/IOServer";
 import { BaseService, BaseController, IOServerError } from "../../src";
-const supertest = require("supertest");
+import supertest from "supertest";
+import { io } from "socket.io-client";
 
 describe("IOServer Integration Tests", () => {
   let server: IOServer;
 
   class TestService extends BaseService {
-    async hello(socket: any, data: any, callback?: Function): Promise<void> {
+    async hello(
+      socket: any,
+      data: any,
+      callback?: (response: any) => void
+    ): Promise<void> {
       socket.emit("hello_response", { message: "Hello from test service" });
       if (callback) callback({ status: "success" });
     }
 
-    async echo(socket: any, data: any, callback?: Function): Promise<void> {
+    async echo(
+      socket: any,
+      data: any,
+      callback?: (response: any) => void
+    ): Promise<void> {
       socket.emit("echo_response", data);
       if (callback) callback({ status: "success", data });
     }
 
     // Throws an UNEXPECTED error with a sensitive internal message — must be
     // masked into a generic 500 over the wire.
-    async boom(_socket: any, _data: any, _callback?: Function): Promise<void> {
+    async boom(
+      _socket: any,
+      _data: any,
+      _callback?: (response: any) => void
+    ): Promise<void> {
       throw new Error("sensitive: db connection string secret");
     }
 
@@ -26,7 +39,7 @@ describe("IOServer Integration Tests", () => {
     async boomTyped(
       _socket: any,
       _data: any,
-      _callback?: Function
+      _callback?: (response: any) => void
     ): Promise<void> {
       throw new IOServerError("Explicit business error", 400);
     }
@@ -122,7 +135,6 @@ describe("IOServer Integration Tests", () => {
 
   describe("WebSocket Connections", () => {
     it("should accept Socket.IO connections", (done) => {
-      const io = require("socket.io-client");
       const client = io("http://localhost:3003/test");
 
       client.on("connect", () => {
@@ -137,7 +149,6 @@ describe("IOServer Integration Tests", () => {
     });
 
     it("should handle service events", (done) => {
-      const io = require("socket.io-client");
       const client = io("http://localhost:3003/test");
 
       client.on("connect", () => {
@@ -154,7 +165,6 @@ describe("IOServer Integration Tests", () => {
     });
 
     it("should echo data correctly", (done) => {
-      const io = require("socket.io-client");
       const client = io("http://localhost:3003/test");
       const testData = { test: "data", number: 42 };
 
@@ -174,7 +184,6 @@ describe("IOServer Integration Tests", () => {
     });
 
     it("masks unexpected service errors with a generic payload", (done) => {
-      const io = require("socket.io-client");
       const client = io("http://localhost:3003/test");
 
       client.on("connect", () => {
@@ -194,7 +203,6 @@ describe("IOServer Integration Tests", () => {
     });
 
     it("surfaces intentional IOServerError details to the client", (done) => {
-      const io = require("socket.io-client");
       const client = io("http://localhost:3003/test");
 
       client.on("connect", () => {
@@ -214,7 +222,6 @@ describe("IOServer Integration Tests", () => {
 
   describe("Error Handling", () => {
     it("should handle malformed Socket.IO events gracefully", (done) => {
-      const io = require("socket.io-client");
       const client = io("http://localhost:3003/test");
 
       client.on("connect", () => {

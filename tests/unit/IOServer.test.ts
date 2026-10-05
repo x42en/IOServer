@@ -22,7 +22,7 @@ describe('IOServer Unit Tests', () => {
     if (server) {
       try {
         await server.stop();
-      } catch (error) {
+      } catch {
         // Ignore stop errors in tests
       }
     }

@@ -32,7 +32,7 @@ export class ChatService extends BaseService {
   async login(
     socket: any,
     data: { username: string },
-    callback?: Function
+    callback?: (response: any) => void
   ): Promise<void> {
     const { username } = data;
 
@@ -104,7 +104,7 @@ export class ChatService extends BaseService {
   async send_message(
     socket: any,
     data: { content: string },
-    callback?: Function
+    callback?: (response: any) => void
   ): Promise<void> {
     const user = this.users.get(socket.id);
 
@@ -147,7 +147,7 @@ export class ChatService extends BaseService {
   async join_room(
     socket: any,
     data: { room: string },
-    callback?: Function
+    callback?: (response: any) => void
   ): Promise<void> {
     const user = this.users.get(socket.id);
 
@@ -234,7 +234,7 @@ export class ChatService extends BaseService {
   async get_room_users(
     socket: any,
     data: any,
-    callback?: Function
+    callback?: (response: any) => void
   ): Promise<void> {
     const user = this.users.get(socket.id);
 
@@ -253,7 +253,7 @@ export class ChatService extends BaseService {
   async get_available_rooms(
     socket: any,
     data: any,
-    callback?: Function
+    callback?: (response: any) => void
   ): Promise<void> {
     const availableRooms = this.getAvailableRooms();
 
@@ -264,7 +264,7 @@ export class ChatService extends BaseService {
   async typing(
     socket: any,
     data: { isTyping: boolean },
-    callback?: Function
+    _callback?: (response: any) => void
   ): Promise<void> {
     const user = this.users.get(socket.id);
 

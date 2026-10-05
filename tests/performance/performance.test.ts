@@ -1,4 +1,5 @@
 import { IOServer } from "../../src";
+import { io } from "socket.io-client";
 
 describe("Performance Tests", () => {
   let server: IOServer;
@@ -22,13 +23,12 @@ describe("Performance Tests", () => {
 
   describe("Concurrent Connections", () => {
     it("should handle multiple simultaneous connections", async () => {
-      const io = require("socket.io-client");
       const connectionCount = 50;
       const clients: any[] = [];
 
       const connectionPromises = Array.from(
         { length: connectionCount },
-        (_, i) => {
+        (_, _unused) => {
           return new Promise((resolve, reject) => {
             const client = io(`http://localhost:${port}`);
             clients.push(client);
@@ -47,10 +47,9 @@ describe("Performance Tests", () => {
     }, 15000);
 
     it("should handle rapid message sending", async () => {
-      const io = require("socket.io-client");
       const client = io(`http://localhost:${port}`);
 
-      await new Promise((resolve) => client.on("connect", resolve));
+      await new Promise<void>((resolve) => client.on("connect", () => resolve()));
 
       const messageCount = 100;
       const responses: any[] = [];
@@ -73,7 +72,6 @@ describe("Performance Tests", () => {
 
   describe("Memory Usage", () => {
     it("should not leak memory with connection cycles", async () => {
-      const io = require("socket.io-client");
       const initialMemory = process.memoryUsage().heapUsed;
 
       // Create and destroy connections multiple times (reduced cycles)
@@ -84,7 +82,10 @@ describe("Performance Tests", () => {
 
         await Promise.all(
           clients.map(
-            (client) => new Promise((resolve) => client.on("connect", resolve))
+            (client) =>
+              new Promise<void>((resolve) =>
+                client.on("connect", () => resolve())
+              )
           )
         );
 

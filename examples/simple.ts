@@ -11,7 +11,11 @@ import {
 
 // Example Service
 class SimpleService extends BaseService {
-  async hello(socket: any, data: any, callback?: Function): Promise<void> {
+  async hello(
+    socket: any,
+    data: any,
+    callback?: (response: any) => void
+  ): Promise<void> {
     this.appHandle.log(6, `Hello received: ${JSON.stringify(data)}`);
     socket.emit("hello_response", {
       message: "Hello from TypeScript server!",

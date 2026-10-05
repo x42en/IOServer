@@ -17,7 +17,7 @@ import * as path from 'path';
 import { IOServer } from '../../src/IOServer';
 import { BaseController } from '../../src';
 
-const supertest = require('supertest');
+import supertest from 'supertest';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

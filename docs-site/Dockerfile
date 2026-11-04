@@ -7,7 +7,7 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 ARG NUXT_APP_BASE_URL=/ioserver/
-ARG NUXT_SITE_URL=https://docs.circle-cyber.com/ioserver
+ARG NUXT_SITE_URL=https://docs.circle-cyber.com
 
 ENV NUXT_APP_BASE_URL=${NUXT_APP_BASE_URL}
 ENV NUXT_SITE_URL=${NUXT_SITE_URL}
@@ -29,7 +29,7 @@ COPY --from=builder /app/.output ./.output
 # base URL and site URL. Without these declarations the ARG values from
 # Stage 1 are not propagated to the final image.
 ARG NUXT_APP_BASE_URL=/ioserver/
-ARG NUXT_SITE_URL=https://docs.circle-cyber.com/ioserver
+ARG NUXT_SITE_URL=https://docs.circle-cyber.com
 
 ENV HOST=0.0.0.0
 ENV PORT=3000

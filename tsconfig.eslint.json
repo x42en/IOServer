@@ -4,15 +4,6 @@
     "rootDir": ".",
     "noEmit": true
   },
-  "include": [
-    "src/**/*",
-    "tests/**/*",
-    "examples/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "coverage",
-    "docs/source/_static/api"
-  ]
+  "include": ["src/**/*", "tests/**/*", "examples/**/*"],
+  "exclude": ["node_modules", "dist", "coverage", "docs/source/_static/api"]
 }

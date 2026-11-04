@@ -9,9 +9,5 @@
     "skipLibCheck": true,
     "types": []
   },
-  "include": [
-    "app/**/*.ts",
-    "server/**/*.ts",
-    "nuxt.config.ts"
-  ]
+  "include": ["app/**/*.ts", "server/**/*.ts", "nuxt.config.ts"]
 }

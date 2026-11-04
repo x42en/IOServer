@@ -4,14 +4,14 @@ export default defineNuxtConfig({
     baseURL: process.env.NUXT_APP_BASE_URL ?? "/ioserver/",
   },
   site: {
-    url: process.env.NUXT_SITE_URL ?? "https://docs.circle-cyber.com/ioserver",
+    url: process.env.NUXT_SITE_URL ?? "https://docs.circle-cyber.com",
   },
   robots: { robotsTxt: false },
   meta: {
     title: "IOServer",
     description:
       "TypeScript framework combining Fastify and Socket.IO with a modular component architecture.",
-    ogHost: process.env.NUXT_SITE_URL ?? "https://docs.circle-cyber.com/ioserver",
+    ogHost: process.env.NUXT_SITE_URL ?? "https://docs.circle-cyber.com",
   },
   llms: {
     title: "IOServer",

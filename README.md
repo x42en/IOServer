@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/ioserver.svg)](https://badge.fury.io/js/ioserver)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
 [![CI Build and Test](https://github.com/x42en/IOServer/actions/workflows/build.yml/badge.svg)](https://github.com/x42en/IOServer/actions)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0+-blue.svg)](https://www.typescriptlang.org/)
 
 A TypeScript framework for building real-time applications, combining [Fastify](https://fastify.dev/) (HTTP) and [Socket.IO](https://socket.io/) (WebSocket) behind a single unified API.
 
@@ -66,8 +66,8 @@ graph TB
 
 ## Requirements
 
-- Node.js 18+
-- TypeScript 5.0+
+- Node.js 22+
+- TypeScript 6.0+
 - pnpm (recommended) or npm / yarn
 
 ## Installation
@@ -86,8 +86,12 @@ import { IOServer, BaseService, BaseController, BaseManager } from 'ioserver';
 // --- Manager: shared state ---
 class AppManager extends BaseManager {
   private count = 0;
-  increment() { this.count++; }
-  getCount() { return this.count; }
+  increment() {
+    this.count++;
+  }
+  getCount() {
+    return this.count;
+  }
 }
 
 // --- Service: WebSocket events ---
@@ -95,7 +99,10 @@ class ChatService extends BaseService {
   async sendMessage(socket: any, data: { text: string }, callback?: Function) {
     const mgr = this.app.getManager('app') as AppManager;
     mgr.increment();
-    socket.broadcast.emit('message', { text: data.text, total: mgr.getCount() });
+    socket.broadcast.emit('message', {
+      text: data.text,
+      total: mgr.getCount(),
+    });
     if (callback) callback({ status: 'ok' });
   }
 }
@@ -147,11 +154,11 @@ server.addService({ name: 'room', service: RoomService });
 
 Registration options:
 
-| Option | Type | Description |
-|---|---|---|
-| `name` | `string` | Namespace name (used as Socket.IO namespace `/name`) |
-| `service` | `typeof BaseService` | Service class (not an instance) |
-| `middlewares` | `BaseMiddleware[]` | Optional middleware chain for this namespace |
+| Option        | Type                 | Description                                          |
+| ------------- | -------------------- | ---------------------------------------------------- |
+| `name`        | `string`             | Namespace name (used as Socket.IO namespace `/name`) |
+| `service`     | `typeof BaseService` | Service class (not an instance)                      |
+| `middlewares` | `BaseMiddleware[]`   | Optional middleware chain for this namespace         |
 
 ### Controllers — HTTP route handlers
 
@@ -162,11 +169,17 @@ import { BaseController } from 'ioserver';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 class UserController extends BaseController {
-  async getUser(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+  async getUser(
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+  ) {
     reply.send({ id: request.params.id });
   }
 
-  async createUser(request: FastifyRequest<{ Body: { name: string } }>, reply: FastifyReply) {
+  async createUser(
+    request: FastifyRequest<{ Body: { name: string } }>,
+    reply: FastifyReply
+  ) {
     reply.code(201).send({ id: crypto.randomUUID(), name: request.body.name });
   }
 }
@@ -178,18 +191,18 @@ Corresponding route file `routes/user.json`:
 
 ```json
 [
-  { "method": "GET",  "url": "/users/:id", "handler": "getUser"    },
-  { "method": "POST", "url": "/users",     "handler": "createUser" }
+  { "method": "GET", "url": "/users/:id", "handler": "getUser" },
+  { "method": "POST", "url": "/users", "handler": "createUser" }
 ]
 ```
 
 Registration options:
 
-| Option | Type | Description |
-|---|---|---|
-| `name` | `string` | Must match the JSON route file basename (`routes/<name>.json`) |
-| `controller` | `typeof BaseController` | Controller class (not an instance) |
-| `middlewares` | `BaseMiddleware[]` | Optional middleware chain for all routes of this controller |
+| Option        | Type                    | Description                                                    |
+| ------------- | ----------------------- | -------------------------------------------------------------- |
+| `name`        | `string`                | Must match the JSON route file basename (`routes/<name>.json`) |
+| `controller`  | `typeof BaseController` | Controller class (not an instance)                             |
+| `middlewares` | `BaseMiddleware[]`      | Optional middleware chain for all routes of this controller    |
 
 ### Managers — Injectable singletons
 
@@ -201,9 +214,15 @@ import { BaseManager } from 'ioserver';
 class CacheManager extends BaseManager {
   private store = new Map<string, unknown>();
 
-  set(key: string, value: unknown) { this.store.set(key, value); }
-  get(key: string)                 { return this.store.get(key); }
-  has(key: string)                 { return this.store.has(key); }
+  set(key: string, value: unknown) {
+    this.store.set(key, value);
+  }
+  get(key: string) {
+    return this.store.get(key);
+  }
+  has(key: string) {
+    return this.store.has(key);
+  }
 }
 
 server.addManager({ name: 'cache', manager: CacheManager });
@@ -271,11 +290,17 @@ class AuthMiddleware extends BaseMiddleware {
     next();
   }
 
-  private verify(token: string) { /* JWT verification */ return true; }
+  private verify(token: string) {
+    /* JWT verification */ return true;
+  }
 }
 
 // Apply to a specific controller or service
-server.addController({ name: 'admin', controller: AdminController, middlewares: [AuthMiddleware] });
+server.addController({
+  name: 'admin',
+  controller: AdminController,
+  middlewares: [AuthMiddleware],
+});
 ```
 
 ## Configuration
@@ -284,17 +309,17 @@ server.addController({ name: 'admin', controller: AdminController, middlewares: 
 const server = new IOServer(options);
 ```
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `host` | `string` | `'localhost'` | Bind address |
-| `port` | `number` | `8080` | Listen port |
-| `verbose` | `string` | `'ERROR'` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
-| `cookie` | `boolean` | `false` | Enable Socket.IO cookies |
-| `mode` | `string \| string[]` | `['websocket','polling']` | Socket.IO transport(s) |
-| `cors` | `object` | `undefined` | Fastify CORS options (applied to HTTP and Socket.IO) |
-| `routes` | `string` | `'./routes'` | Directory containing JSON route files |
-| `rootDir` | `string` | `'.'` | Root directory for static file serving |
-| `spaFallback` | `boolean` | `false` | Serve `index.html` for unmatched routes (SPA mode) |
+| Option        | Type                 | Default                   | Description                                          |
+| ------------- | -------------------- | ------------------------- | ---------------------------------------------------- |
+| `host`        | `string`             | `'localhost'`             | Bind address                                         |
+| `port`        | `number`             | `8080`                    | Listen port                                          |
+| `verbose`     | `string`             | `'ERROR'`                 | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)      |
+| `cookie`      | `boolean`            | `false`                   | Enable Socket.IO cookies                             |
+| `mode`        | `string \| string[]` | `['websocket','polling']` | Socket.IO transport(s)                               |
+| `cors`        | `object`             | `undefined`               | Fastify CORS options (applied to HTTP and Socket.IO) |
+| `routes`      | `string`             | `'./routes'`              | Directory containing JSON route files                |
+| `rootDir`     | `string`             | `'.'`                     | Root directory for static file serving               |
+| `spaFallback` | `boolean`            | `false`                   | Serve `index.html` for unmatched routes (SPA mode)   |
 
 ### CORS example
 
@@ -403,7 +428,7 @@ services:
   app:
     build: .
     ports:
-      - "8080:8080"
+      - '8080:8080'
     environment:
       NODE_ENV: production
     restart: unless-stopped

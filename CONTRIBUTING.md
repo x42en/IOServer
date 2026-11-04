@@ -24,9 +24,9 @@ Thank you for your interest in contributing to IOServer! This document covers th
 
 ## Prerequisites
 
-- Node.js ≥ 18 (≥ 20 recommended)
-- pnpm v9 — `npm install -g pnpm@9`
-- TypeScript ≥ 5.0
+- Node.js ≥ 22
+- pnpm 12.9.1 — `corepack enable` (the version is pinned in `packageManager`)
+- TypeScript ≥ 6.0
 
 ## Development setup
 
@@ -53,13 +53,13 @@ IOServer enforces a strict five-component model. Follow these rules when writing
 
 ### Component separation
 
-| Component | Responsibilities | Must NOT |
-|---|---|---|
-| **Manager** | Hold shared state; interact with external services; expose a typed public API | Handle HTTP/WS connections; know about sockets |
-| **Service** | Handle Socket.IO events; access managers via `appHandle`; emit/broadcast to clients | Directly call Fastify; import HTTP libraries |
-| **Controller** | Handle Fastify requests; access managers via `appHandle`; return responses | Hold persistent in-request state; access Socket.IO sockets |
-| **Watcher** | Run periodic background tasks; access managers; push WS events via `appHandle.send` | Handle HTTP/WS client connections directly |
-| **Middleware** | Intercept requests/connections; read from managers; set request/socket properties | Hold state between requests |
+| Component      | Responsibilities                                                                    | Must NOT                                                   |
+| -------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Manager**    | Hold shared state; interact with external services; expose a typed public API       | Handle HTTP/WS connections; know about sockets             |
+| **Service**    | Handle Socket.IO events; access managers via `appHandle`; emit/broadcast to clients | Directly call Fastify; import HTTP libraries               |
+| **Controller** | Handle Fastify requests; access managers via `appHandle`; return responses          | Hold persistent in-request state; access Socket.IO sockets |
+| **Watcher**    | Run periodic background tasks; access managers; push WS events via `appHandle.send` | Handle HTTP/WS client connections directly                 |
+| **Middleware** | Intercept requests/connections; read from managers; set request/socket properties   | Hold state between requests                                |
 
 ### Registration order
 
@@ -67,12 +67,12 @@ Managers **must** be registered before any component that reads from them:
 
 ```typescript
 // ✅ Correct — db is available in appHandle when ChatService is instantiated
-server.addManager({ name: "db", manager: DatabaseManager });
-server.addService({ name: "chat", service: ChatService });
+server.addManager({ name: 'db', manager: DatabaseManager });
+server.addService({ name: 'chat', service: ChatService });
 
 // ❌ Wrong — appHandle.db is undefined when ChatService constructor runs
-server.addService({ name: "chat", service: ChatService });
-server.addManager({ name: "db", manager: DatabaseManager });
+server.addService({ name: 'chat', service: ChatService });
+server.addManager({ name: 'db', manager: DatabaseManager });
 ```
 
 ### TypeScript requirements
@@ -86,12 +86,12 @@ server.addManager({ name: "db", manager: DatabaseManager });
 
 ### Naming conventions
 
-| Element | Convention | Reason |
-|---|---|---|
-| Manager name in `addManager` | camelCase (e.g. `sessionManager`) | Becomes a property on `appHandle` |
-| Private service methods | `_methodName` prefix | Prevents automatic Socket.IO event registration |
-| Route files | Match controller `name` exactly | IOServer reads `{routesPath}/{name}.json` |
-| Watcher interval tracking | `private intervals: ...[] = []` | Enables clean `stop()` |
+| Element                      | Convention                        | Reason                                          |
+| ---------------------------- | --------------------------------- | ----------------------------------------------- |
+| Manager name in `addManager` | camelCase (e.g. `sessionManager`) | Becomes a property on `appHandle`               |
+| Private service methods      | `_methodName` prefix              | Prevents automatic Socket.IO event registration |
+| Route files                  | Match controller `name` exactly   | IOServer reads `{routesPath}/{name}.json`       |
+| Watcher interval tracking    | `private intervals: ...[] = []`   | Enables clean `stop()`                          |
 
 ---
 
@@ -129,12 +129,12 @@ pnpm run test:watch             # watch mode (development)
 
 ### Coverage targets
 
-| Metric | Target |
-|---|---|
-| Statements | > 90% |
-| Branches | > 85% |
-| Functions | > 95% |
-| Lines | > 90% |
+| Metric     | Target |
+| ---------- | ------ |
+| Statements | > 90%  |
+| Branches   | > 85%  |
+| Functions  | > 95%  |
+| Lines      | > 90%  |
 
 ### Writing tests
 
@@ -150,11 +150,15 @@ pnpm run test:watch             # watch mode (development)
 ## Linting
 
 ```bash
-pnpm run lint        # report issues
-pnpm run lint:fix    # auto-fix where possible
+pnpm run lint         # report issues
+pnpm run lint:fix     # auto-fix where possible
+pnpm run format       # Prettier auto-fix
+pnpm run format:check # Prettier check (no write)
 ```
 
-Configuration is in `eslint.config.js`. Lint warnings must not accumulate — resolve them before opening a PR.
+Configuration is in `eslint.config.js` (type-aware, using `tsconfig.eslint.json`)
+and `.prettierrc`. Lint warnings must not accumulate — resolve them before
+opening a PR.
 
 ---
 
@@ -188,12 +192,11 @@ renamed to `id` for consistency with other options.
 
 ## Pull requests
 
-1. Fork the repository and create a feature branch from `main` (e.g. `feat/my-feature`)
+1. Fork the repository and create a feature branch from `develop` (e.g. `feat/my-feature`)
 2. Write or update tests for your change
-3. Ensure `pnpm test` passes (all four test suites)
-4. Ensure `pnpm run build` produces no TypeScript errors
-5. Open a PR against `main` — the CI pipeline (`build.yml`) runs automatically on every PR
-6. Address review comments; squash merge when approved
+3. Run `pnpm build`, `pnpm test`, `pnpm lint` and `pnpm format:check`
+4. Open a PR against `develop` — the CI pipeline (`build.yml`) runs automatically on every PR
+5. Address review comments; squash merge when approved
 
 ---
 

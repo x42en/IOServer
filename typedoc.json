@@ -9,17 +9,12 @@
   "defaultCategory": "API",
   "categoryOrder": [
     "Main Classes",
-    "Base Classes", 
+    "Base Classes",
     "Interfaces",
     "Type Definitions",
     "Errors"
   ],
-  "groupOrder": [
-    "Classes",
-    "Interfaces",
-    "Types",
-    "Functions"
-  ],
+  "groupOrder": ["Classes", "Interfaces", "Types", "Functions"],
   "excludePrivate": false,
   "excludeProtected": false,
   "excludeInternal": false,
@@ -35,7 +30,7 @@
   "commentStyle": "jsdoc",
   "blockTags": [
     "@alpha",
-    "@beta", 
+    "@beta",
     "@deprecated",
     "@example",
     "@experimental",
@@ -53,11 +48,5 @@
     "@throws",
     "@virtual"
   ],
-  "inlineTags": [
-    "@inheritDoc",
-    "@label",
-    "@link",
-    "@linkcode",
-    "@linkplain"
-  ]
+  "inlineTags": ["@inheritDoc", "@label", "@link", "@linkcode", "@linkplain"]
 }

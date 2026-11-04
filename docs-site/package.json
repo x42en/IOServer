@@ -1,17 +1,23 @@
 {
-    "name": "ioserver-docs",
-    "version": "1.0.0",
-    "private": true,
-    "description": "IOServer documentation — TypeScript framework for real-time applications.",
-    "scripts": {
-        "dev": "nuxt dev",
-        "build": "nuxt build",
-        "generate": "nuxt generate",
-        "preview": "nuxt preview"
-    },
-    "dependencies": {
-        "docus": "latest",
-        "nuxt": "^4.0.0",
-        "better-sqlite3": "^12.2.0"
-    }
+  "name": "ioserver-docs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "IOServer documentation — TypeScript framework for real-time applications.",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview"
+  },
+  "dependencies": {
+    "docus": "^5.15.0",
+    "nuxt": "^4.6.4",
+    "better-sqlite3": "^12.11.1"
+  },
+  "overrides": {
+    "zod": "^4.6.7",
+    "minimatch": "^11.0.1",
+    "glob": "^14.0.2",
+    "esbuild": "^0.28.1"
+  }
 }

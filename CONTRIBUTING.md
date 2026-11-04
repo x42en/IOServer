@@ -24,9 +24,9 @@ Thank you for your interest in contributing to IOServer! This document covers th
 
 ## Prerequisites
 
-- Node.js ≥ 18 (≥ 20 recommended)
-- pnpm v9 — `npm install -g pnpm@9`
-- TypeScript ≥ 5.0
+- Node.js ≥ 22
+- pnpm 12.9.1 — `corepack enable` (the version is pinned in `packageManager`)
+- TypeScript ≥ 6.0
 
 ## Development setup
 
@@ -150,11 +150,15 @@ pnpm run test:watch             # watch mode (development)
 ## Linting
 
 ```bash
-pnpm run lint        # report issues
-pnpm run lint:fix    # auto-fix where possible
+pnpm run lint         # report issues
+pnpm run lint:fix     # auto-fix where possible
+pnpm run format       # Prettier auto-fix
+pnpm run format:check # Prettier check (no write)
 ```
 
-Configuration is in `eslint.config.js`. Lint warnings must not accumulate — resolve them before opening a PR.
+Configuration is in `eslint.config.js` (type-aware, using `tsconfig.eslint.json`)
+and `.prettierrc`. Lint warnings must not accumulate — resolve them before
+opening a PR.
 
 ---
 
@@ -188,12 +192,11 @@ renamed to `id` for consistency with other options.
 
 ## Pull requests
 
-1. Fork the repository and create a feature branch from `main` (e.g. `feat/my-feature`)
+1. Fork the repository and create a feature branch from `develop` (e.g. `feat/my-feature`)
 2. Write or update tests for your change
-3. Ensure `pnpm test` passes (all four test suites)
-4. Ensure `pnpm run build` produces no TypeScript errors
-5. Open a PR against `main` — the CI pipeline (`build.yml`) runs automatically on every PR
-6. Address review comments; squash merge when approved
+3. Run `pnpm build`, `pnpm test`, `pnpm lint` and `pnpm format:check`
+4. Open a PR against `develop` — the CI pipeline (`build.yml`) runs automatically on every PR
+5. Address review comments; squash merge when approved
 
 ---
 

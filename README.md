@@ -66,7 +66,7 @@ graph TB
 
 ## Requirements
 
-- Node.js 18+
+- Node.js 22+
 - TypeScript 6.0+
 - pnpm (recommended) or npm / yarn
 

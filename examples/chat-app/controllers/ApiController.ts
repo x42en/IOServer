@@ -6,7 +6,7 @@ export class ApiController extends BaseController {
       status: "OK",
       timestamp: new Date().toISOString(),
       service: "IOServer Chat App API",
-      version: "2.2.1",
+      version: "2.3.0",
     });
   }
 

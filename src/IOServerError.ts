@@ -6,7 +6,7 @@
  * and API error responses.
  *
  * @author Ben Mz <0x42en@users.noreply.github.com>
- * @version 2.2.1
+ * @version 2.3.0
  * @since 1.0.0
  */
 

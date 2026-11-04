@@ -28,16 +28,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cleared every high and moderate advisory reachable from this repository with
   `pnpm-workspace.yaml` overrides: `brace-expansion`, `engine.io`, `fast-uri`,
   `form-data`, `socket.io-parser`, `ws`, `js-yaml`, `glob`, `minimatch`,
-  `qs`, `browserslist` and `baseline-browser-mapping`.
+  `markdown-it`, `qs`, `browserslist` and `baseline-browser-mapping`.
 - `@fastify/static` raised to 10.1.10, which fixes the route-guard bypass
   (GHSA-83w8-p2f5-377r) and non-canonical path bypass. Its ESM-only
   `content-disposition` 3.x dependency is overridden to the CommonJS 2.0.1
   release, which exposes the same `create()` API and keeps the CJS build and
   Jest path working.
-- One low advisory remains: `deepmerge` 4.3.1 in Jest's configuration path has
-  no patched release. It is dev-only, not shipped in `dist/`, and never receives
-  untrusted runtime input. Revisit when Jest updates the dependency or a patched
-  release exists; remove the exception then.
+- One low advisory remains in the package tree: `deepmerge` 4.3.1 in Jest's
+  configuration path has no patched release. It is dev-only, not shipped in
+  `dist/`, and never receives untrusted runtime input. Revisit when Jest updates
+  the dependency or a patched release exists; remove the exception then.
+- The documentation site (`docs-site/`, npm) reports only low advisories in its
+  build toolchain (`deepmerge` and transitive Nuxt modules). It is a separate
+  private package, never published, and never handles untrusted input. Revisit
+  with the next Docus/Nuxt upgrade.
 
 ## [2.2.1] — 2026-10-04
 

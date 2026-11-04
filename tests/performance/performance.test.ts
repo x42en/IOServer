@@ -1,15 +1,15 @@
-import { IOServer } from "../../src";
-import { io } from "socket.io-client";
+import { IOServer } from '../../src';
+import { io } from 'socket.io-client';
 
-describe("Performance Tests", () => {
+describe('Performance Tests', () => {
   let server: IOServer;
   const port = 3005;
 
   beforeAll(async () => {
     server = new IOServer({
-      host: "localhost",
+      host: 'localhost',
       port,
-      verbose: "ERROR",
+      verbose: 'ERROR',
     });
 
     await server.start();
@@ -21,8 +21,8 @@ describe("Performance Tests", () => {
     }
   });
 
-  describe("Concurrent Connections", () => {
-    it("should handle multiple simultaneous connections", async () => {
+  describe('Concurrent Connections', () => {
+    it('should handle multiple simultaneous connections', async () => {
       const connectionCount = 50;
       const clients: any[] = [];
 
@@ -33,8 +33,8 @@ describe("Performance Tests", () => {
             const client = io(`http://localhost:${port}`);
             clients.push(client);
 
-            client.on("connect", () => resolve(client));
-            client.on("connect_error", reject);
+            client.on('connect', () => resolve(client));
+            client.on('connect_error', reject);
           });
         }
       );
@@ -43,35 +43,35 @@ describe("Performance Tests", () => {
       expect(connectedClients).toHaveLength(connectionCount);
 
       // Cleanup
-      clients.forEach((client) => client.disconnect());
+      clients.forEach(client => client.disconnect());
     }, 15000);
 
-    it("should handle rapid message sending", async () => {
+    it('should handle rapid message sending', async () => {
       const client = io(`http://localhost:${port}`);
 
-      await new Promise<void>((resolve) => client.on("connect", () => resolve()));
+      await new Promise<void>(resolve => client.on('connect', () => resolve()));
 
       const messageCount = 100;
       const responses: any[] = [];
 
-      client.on("test_response", (data: any) => {
+      client.on('test_response', (data: any) => {
         responses.push(data);
       });
 
       // Send messages rapidly
       for (let i = 0; i < messageCount; i++) {
-        client.emit("test", { id: i, message: `Message ${i}` });
+        client.emit('test', { id: i, message: `Message ${i}` });
       }
 
       // Wait for responses
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       client.disconnect();
     }, 10000);
   });
 
-  describe("Memory Usage", () => {
-    it("should not leak memory with connection cycles", async () => {
+  describe('Memory Usage', () => {
+    it('should not leak memory with connection cycles', async () => {
       const initialMemory = process.memoryUsage().heapUsed;
 
       // Create and destroy connections multiple times (reduced cycles)
@@ -82,24 +82,24 @@ describe("Performance Tests", () => {
 
         await Promise.all(
           clients.map(
-            (client) =>
-              new Promise<void>((resolve) =>
-                client.on("connect", () => resolve())
+            client =>
+              new Promise<void>(resolve =>
+                client.on('connect', () => resolve())
               )
           )
         );
 
-        clients.forEach((client) => client.disconnect());
+        clients.forEach(client => client.disconnect());
 
         // Allow more time for cleanup
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
 
       // Force garbage collection multiple times if available
       if (global.gc) {
         for (let i = 0; i < 3; i++) {
           global.gc();
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
 

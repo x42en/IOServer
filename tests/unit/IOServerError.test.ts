@@ -1,38 +1,38 @@
-import { IOServerError } from "../../src";
+import { IOServerError } from '../../src';
 
-describe("IOServerError Unit Tests", () => {
-  describe("Constructor", () => {
-    it("should create error with message and status code", () => {
-      const error = new IOServerError("Test error", 500);
+describe('IOServerError Unit Tests', () => {
+  describe('Constructor', () => {
+    it('should create error with message and status code', () => {
+      const error = new IOServerError('Test error', 500);
 
       expect(error).toBeInstanceOf(Error);
       expect(error).toBeInstanceOf(IOServerError);
-      expect(error.message).toBe("Test error");
+      expect(error.message).toBe('Test error');
       expect(error.statusCode).toBe(500);
-      expect(error.name).toBe("IOServerError");
+      expect(error.name).toBe('IOServerError');
     });
 
-    it("should create error with default status code", () => {
-      const error = new IOServerError("Test error");
+    it('should create error with default status code', () => {
+      const error = new IOServerError('Test error');
 
-      expect(error.message).toBe("Test error");
+      expect(error.message).toBe('Test error');
       expect(error.statusCode).toBe(500);
     });
 
-    it("should have proper stack trace", () => {
-      const error = new IOServerError("Test error", 400);
+    it('should have proper stack trace', () => {
+      const error = new IOServerError('Test error', 400);
 
       expect(error.stack).toBeDefined();
-      expect(error.stack).toContain("IOServerError");
+      expect(error.stack).toContain('IOServerError');
     });
   });
 
-  describe("Status Codes", () => {
-    it("should handle different HTTP status codes", () => {
-      const badRequest = new IOServerError("Bad request", 400);
-      const unauthorized = new IOServerError("Unauthorized", 401);
-      const notFound = new IOServerError("Not found", 404);
-      const serverError = new IOServerError("Server error", 500);
+  describe('Status Codes', () => {
+    it('should handle different HTTP status codes', () => {
+      const badRequest = new IOServerError('Bad request', 400);
+      const unauthorized = new IOServerError('Unauthorized', 401);
+      const notFound = new IOServerError('Not found', 404);
+      const serverError = new IOServerError('Server error', 500);
 
       expect(badRequest.statusCode).toBe(400);
       expect(unauthorized.statusCode).toBe(401);
@@ -41,25 +41,25 @@ describe("IOServerError Unit Tests", () => {
     });
   });
 
-  describe("Error Inheritance", () => {
-    it("should be caught as Error", () => {
+  describe('Error Inheritance', () => {
+    it('should be caught as Error', () => {
       try {
-        throw new IOServerError("Test error", 500);
+        throw new IOServerError('Test error', 500);
       } catch (error) {
         expect(error).toBeInstanceOf(Error);
         expect(error).toBeInstanceOf(IOServerError);
       }
     });
 
-    it("should preserve error properties in catch block", () => {
+    it('should preserve error properties in catch block', () => {
       try {
-        throw new IOServerError("Custom error", 422);
+        throw new IOServerError('Custom error', 422);
       } catch (error) {
         // Asserts the caught value is an IOServerError before reading its
         // properties — the explicit expect() replaces the `fail()` helper,
         // which is a Jasmine global jest-circus does not provide.
         expect(error).toBeInstanceOf(IOServerError);
-        expect((error as IOServerError).message).toBe("Custom error");
+        expect((error as IOServerError).message).toBe('Custom error');
         expect((error as IOServerError).statusCode).toBe(422);
       }
     });

@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Dependency pass: Fastify 5.12.8, `@fastify/cors` 11.4.0,
+  `@fastify/sensible` 6.0.7, `@fastify/static` 10.1.10, Socket.IO 4.8.4,
+  Jest 30.5.2, ts-jest 29.4.15, ESLint 10.14.0, `@typescript-eslint` 8.72.1,
+  TypeDoc 0.28.20 and Prettier 3.9.10.
+- TypeScript 6.0.3: the build now uses `module`/`moduleResolution: node16`
+  (the `node10` resolver is deprecated). `isolatedModules` is enabled and Jest
+  globals are declared explicitly for ts-jest.
+- Node.js floor raised to 22; pnpm pinned at 12.9.1.
+- Added `AGENTS.md` aligned with the auth-service / auth-ai implementation
+  contract.
+- Documentation site dependencies updated to Docus 5.15, Nuxt 4.6.4 and
+  better-sqlite3 12.11.1, with npm overrides for `zod`, `minimatch`, `glob` and
+  `esbuild`.
+
+### Security
+
+- Cleared every high and moderate advisory reachable from this repository with
+  `pnpm-workspace.yaml` overrides: `brace-expansion`, `engine.io`, `fast-uri`,
+  `form-data`, `socket.io-parser`, `ws`, `js-yaml`, `glob`, `minimatch`,
+  `qs`, `browserslist` and `baseline-browser-mapping`.
+- `@fastify/static` raised to 10.1.10, which fixes the route-guard bypass
+  (GHSA-83w8-p2f5-377r) and non-canonical path bypass. Its ESM-only
+  `content-disposition` 3.x dependency is overridden to the CommonJS 2.0.1
+  release, which exposes the same `create()` API and keeps the CJS build and
+  Jest path working.
+- One low advisory remains: `deepmerge` 4.3.1 in Jest's configuration path has
+  no patched release. It is dev-only, not shipped in `dist/`, and never receives
+  untrusted runtime input. Revisit when Jest updates the dependency or a patched
+  release exists; remove the exception then.
+
 ## [2.2.1] — 2026-10-04
 
 ### Security

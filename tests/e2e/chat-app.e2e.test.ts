@@ -1,13 +1,13 @@
-import { IOServer } from "../../src";
-import { ChatService } from "../../examples/chat-app/services/ChatService";
-import { ChatController } from "../../examples/chat-app/controllers/ChatController";
-import { ApiController } from "../../examples/chat-app/controllers/ApiController";
-import { StatsManager } from "../../examples/chat-app/managers/StatsManager";
-import { ChatWatcher } from "../../examples/chat-app/watchers/ChatWatcher";
-import supertest from "supertest";
-import { io } from "socket.io-client";
+import { IOServer } from '../../src';
+import { ChatService } from '../../examples/chat-app/services/ChatService';
+import { ChatController } from '../../examples/chat-app/controllers/ChatController';
+import { ApiController } from '../../examples/chat-app/controllers/ApiController';
+import { StatsManager } from '../../examples/chat-app/managers/StatsManager';
+import { ChatWatcher } from '../../examples/chat-app/watchers/ChatWatcher';
+import supertest from 'supertest';
+import { io } from 'socket.io-client';
 
-describe("Chat Application E2E Tests", () => {
+describe('Chat Application E2E Tests', () => {
   let server: IOServer;
   const port = 3004;
   const serverUrl = `http://localhost:${port}`;
@@ -15,41 +15,41 @@ describe("Chat Application E2E Tests", () => {
   beforeAll(async () => {
     // Create chat app server
     server = new IOServer({
-      host: "localhost",
+      host: 'localhost',
       port,
-      verbose: "ERROR",
+      verbose: 'ERROR',
       cors: {
         origin: [`http://localhost:${port}`],
-        methods: ["GET", "POST"],
+        methods: ['GET', 'POST'],
       },
-      mode: ["websocket", "polling"],
-      routes: "./examples/chat-app/routes", // Use actual chat app routes
+      mode: ['websocket', 'polling'],
+      routes: './examples/chat-app/routes', // Use actual chat app routes
     });
 
     // Register components
     server.addManager({
-      name: "statsManager",
+      name: 'statsManager',
       manager: StatsManager,
     });
 
     server.addWatcher({
-      name: "chatWatcher",
+      name: 'chatWatcher',
       watcher: ChatWatcher,
     });
 
     server.addService({
-      name: "chat",
+      name: 'chat',
       service: ChatService,
     });
 
     server.addController({
-      name: "chat",
+      name: 'chat',
       controller: ChatController,
-      prefix: "",
+      prefix: '',
     });
 
     server.addController({
-      name: "api",
+      name: 'api',
       controller: ApiController,
     });
 
@@ -62,50 +62,50 @@ describe("Chat Application E2E Tests", () => {
     }
   });
 
-  describe("HTTP Endpoints", () => {
-    it("should serve the chat interface at root", async () => {
-      const response = await supertest(serverUrl).get("/").expect(200);
+  describe('HTTP Endpoints', () => {
+    it('should serve the chat interface at root', async () => {
+      const response = await supertest(serverUrl).get('/').expect(200);
 
-      expect(response.headers["content-type"]).toMatch(/text\/html/);
-      expect(response.text).toContain("IOServer Chat");
+      expect(response.headers['content-type']).toMatch(/text\/html/);
+      expect(response.text).toContain('IOServer Chat');
     });
 
-    it("should return health status", async () => {
-      const response = await supertest(serverUrl).get("/health").expect(200);
+    it('should return health status', async () => {
+      const response = await supertest(serverUrl).get('/health').expect(200);
 
       expect(response.body).toEqual({
-        status: "OK",
+        status: 'OK',
         timestamp: expect.any(String),
-        service: "IOServer Chat App",
-        version: "2.2.1",
+        service: 'IOServer Chat App',
+        version: '2.2.1',
       });
     });
 
-    it("should return API status", async () => {
+    it('should return API status', async () => {
       const response = await supertest(serverUrl)
-        .get("/api/status")
+        .get('/api/status')
         .expect(200);
 
-      expect(response.body).toHaveProperty("status", "OK");
-      expect(response.body).toHaveProperty("service", "IOServer Chat App API");
-      expect(response.body).toHaveProperty("version", "2.2.1");
+      expect(response.body).toHaveProperty('status', 'OK');
+      expect(response.body).toHaveProperty('service', 'IOServer Chat App API');
+      expect(response.body).toHaveProperty('version', '2.2.1');
     });
 
-    it("should return chat statistics", async () => {
-      const response = await supertest(serverUrl).get("/api/stats").expect(200);
+    it('should return chat statistics', async () => {
+      const response = await supertest(serverUrl).get('/api/stats').expect(200);
 
-      expect(response.body).toHaveProperty("status", "OK");
-      expect(response.body).toHaveProperty("data");
-      expect(response.body.data).toHaveProperty("totalUsers");
-      expect(response.body.data).toHaveProperty("uptime");
+      expect(response.body).toHaveProperty('status', 'OK');
+      expect(response.body).toHaveProperty('data');
+      expect(response.body.data).toHaveProperty('totalUsers');
+      expect(response.body.data).toHaveProperty('uptime');
     });
   });
 
-  describe("Chat Functionality", () => {
+  describe('Chat Functionality', () => {
     let client1: any;
     let client2: any;
 
-    beforeEach((done) => {
+    beforeEach(done => {
       let connected = 0;
       const checkConnected = () => {
         connected++;
@@ -115,8 +115,8 @@ describe("Chat Application E2E Tests", () => {
       client1 = io(`http://localhost:${port}/chat`);
       client2 = io(`http://localhost:${port}/chat`);
 
-      client1.on("connect", checkConnected);
-      client2.on("connect", checkConnected);
+      client1.on('connect', checkConnected);
+      client2.on('connect', checkConnected);
     });
 
     afterEach(() => {
@@ -124,67 +124,67 @@ describe("Chat Application E2E Tests", () => {
       if (client2) client2.disconnect();
     });
 
-    it("should allow user login", (done) => {
-      client1.emit("login", { username: "testuser1" }, (response: any) => {
-        expect(response.status).toBe("success");
-        expect(response.user.username).toBe("testuser1");
-        expect(response.user.room).toBe("general");
+    it('should allow user login', done => {
+      client1.emit('login', { username: 'testuser1' }, (response: any) => {
+        expect(response.status).toBe('success');
+        expect(response.user.username).toBe('testuser1');
+        expect(response.user.room).toBe('general');
         done();
       });
     });
 
-    it("should prevent duplicate usernames", (done) => {
-      client1.emit("login", { username: "duplicate" }, (response1: any) => {
-        expect(response1.status).toBe("success");
+    it('should prevent duplicate usernames', done => {
+      client1.emit('login', { username: 'duplicate' }, (response1: any) => {
+        expect(response1.status).toBe('success');
 
-        client2.emit("login", { username: "duplicate" }, (response2: any) => {
-          expect(response2.status).toBe("error");
-          expect(response2.message).toContain("already taken");
+        client2.emit('login', { username: 'duplicate' }, (response2: any) => {
+          expect(response2.status).toBe('error');
+          expect(response2.message).toContain('already taken');
           done();
         });
       });
     });
 
-    it("should handle message sending", (done) => {
-      client1.emit("login", { username: "sender" }, () => {
-        client2.emit("login", { username: "receiver" }, () => {
-          client2.on("new_message", (message: any) => {
-            expect(message.username).toBe("sender");
-            expect(message.content).toBe("Hello World!");
-            expect(message.room).toBe("general");
+    it('should handle message sending', done => {
+      client1.emit('login', { username: 'sender' }, () => {
+        client2.emit('login', { username: 'receiver' }, () => {
+          client2.on('new_message', (message: any) => {
+            expect(message.username).toBe('sender');
+            expect(message.content).toBe('Hello World!');
+            expect(message.room).toBe('general');
             done();
           });
 
-          client1.emit("send_message", { content: "Hello World!" });
+          client1.emit('send_message', { content: 'Hello World!' });
         });
       });
     });
   });
 
-  describe("Error Handling", () => {
+  describe('Error Handling', () => {
     let client: any;
 
-    beforeEach((done) => {
+    beforeEach(done => {
       client = io(`http://localhost:${port}/chat`);
-      client.on("connect", () => done());
+      client.on('connect', () => done());
     });
 
     afterEach(() => {
       if (client) client.disconnect();
     });
 
-    it("should handle empty username login", (done) => {
-      client.emit("login", { username: "" }, (response: any) => {
-        expect(response.status).toBe("error");
-        expect(response.message).toContain("required");
+    it('should handle empty username login', done => {
+      client.emit('login', { username: '' }, (response: any) => {
+        expect(response.status).toBe('error');
+        expect(response.message).toContain('required');
         done();
       });
     });
 
-    it("should handle message without login", (done) => {
-      client.emit("send_message", { content: "test" }, (response: any) => {
-        expect(response.status).toBe("error");
-        expect(response.message).toContain("not logged in");
+    it('should handle message without login', done => {
+      client.emit('send_message', { content: 'test' }, (response: any) => {
+        expect(response.status).toBe('error');
+        expect(response.message).toContain('not logged in');
         done();
       });
     });

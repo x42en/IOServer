@@ -1,9 +1,9 @@
-import { IOServer } from "../../src/IOServer";
-import { BaseService, BaseController, IOServerError } from "../../src";
-import supertest from "supertest";
-import { io } from "socket.io-client";
+import { IOServer } from '../../src/IOServer';
+import { BaseService, BaseController, IOServerError } from '../../src';
+import supertest from 'supertest';
+import { io } from 'socket.io-client';
 
-describe("IOServer Integration Tests", () => {
+describe('IOServer Integration Tests', () => {
   let server: IOServer;
 
   class TestService extends BaseService {
@@ -12,8 +12,8 @@ describe("IOServer Integration Tests", () => {
       data: any,
       callback?: (response: any) => void
     ): Promise<void> {
-      socket.emit("hello_response", { message: "Hello from test service" });
-      if (callback) callback({ status: "success" });
+      socket.emit('hello_response', { message: 'Hello from test service' });
+      if (callback) callback({ status: 'success' });
     }
 
     async echo(
@@ -21,8 +21,8 @@ describe("IOServer Integration Tests", () => {
       data: any,
       callback?: (response: any) => void
     ): Promise<void> {
-      socket.emit("echo_response", data);
-      if (callback) callback({ status: "success", data });
+      socket.emit('echo_response', data);
+      if (callback) callback({ status: 'success', data });
     }
 
     // Throws an UNEXPECTED error with a sensitive internal message — must be
@@ -32,7 +32,7 @@ describe("IOServer Integration Tests", () => {
       _data: any,
       _callback?: (response: any) => void
     ): Promise<void> {
-      throw new Error("sensitive: db connection string secret");
+      throw new Error('sensitive: db connection string secret');
     }
 
     // Throws an INTENTIONAL IOServerError — its message is safe to surface.
@@ -41,13 +41,13 @@ describe("IOServer Integration Tests", () => {
       _data: any,
       _callback?: (response: any) => void
     ): Promise<void> {
-      throw new IOServerError("Explicit business error", 400);
+      throw new IOServerError('Explicit business error', 400);
     }
   }
 
   class TestController extends BaseController {
     async getStatus(request: any, reply: any): Promise<void> {
-      reply.send({ status: "OK", timestamp: Date.now() });
+      reply.send({ status: 'OK', timestamp: Date.now() });
     }
 
     async postData(request: any, reply: any): Promise<void> {
@@ -57,24 +57,24 @@ describe("IOServer Integration Tests", () => {
 
   beforeAll(async () => {
     server = new IOServer({
-      host: "localhost",
+      host: 'localhost',
       port: 3003,
-      verbose: "ERROR",
-      routes: "./tests/routes",
+      verbose: 'ERROR',
+      routes: './tests/routes',
       cors: {
-        origin: ["http://localhost:3003"],
-        methods: ["GET", "POST", "OPTIONS"],
+        origin: ['http://localhost:3003'],
+        methods: ['GET', 'POST', 'OPTIONS'],
       },
     });
 
     // Register test components
     server.addService({
-      name: "test",
+      name: 'test',
       service: TestService,
     });
 
     server.addController({
-      name: "api",
+      name: 'api',
       controller: TestController,
     });
 
@@ -87,43 +87,43 @@ describe("IOServer Integration Tests", () => {
     }
   });
 
-  describe("HTTP Routes", () => {
-    it("should respond to registered GET route", async () => {
+  describe('HTTP Routes', () => {
+    it('should respond to registered GET route', async () => {
       const response = await supertest(`http://localhost:3003`)
-        .get("/api/status")
+        .get('/api/status')
         .expect(200);
 
       expect(response.body).toEqual({
-        status: "OK",
+        status: 'OK',
         timestamp: expect.any(Number),
       });
     });
 
-    it("should handle 404 for unregistered routes", async () => {
+    it('should handle 404 for unregistered routes', async () => {
       const response = await supertest(`http://localhost:3003`)
-        .get("/nonexistent")
+        .get('/nonexistent')
         .expect(404);
 
-      expect(response.body).toHaveProperty("statusCode", 404);
-      expect(response.body).toHaveProperty("error", "Not Found");
+      expect(response.body).toHaveProperty('statusCode', 404);
+      expect(response.body).toHaveProperty('error', 'Not Found');
     });
 
-    it("should handle CORS preflight requests", async () => {
+    it('should handle CORS preflight requests', async () => {
       const response = await supertest(`http://localhost:3003`)
-        .options("/api/status")
-        .set("Origin", "http://localhost:3003")
-        .set("Access-Control-Request-Method", "GET")
+        .options('/api/status')
+        .set('Origin', 'http://localhost:3003')
+        .set('Access-Control-Request-Method', 'GET')
         .expect(204);
 
-      expect(response.headers).toHaveProperty("access-control-allow-origin");
-      expect(response.headers).toHaveProperty("access-control-allow-methods");
+      expect(response.headers).toHaveProperty('access-control-allow-origin');
+      expect(response.headers).toHaveProperty('access-control-allow-methods');
     });
 
-    it("should handle POST requests", async () => {
-      const testData = { message: "test data" };
+    it('should handle POST requests', async () => {
+      const testData = { message: 'test data' };
 
       const response = await supertest(`http://localhost:3003`)
-        .post("/api/data")
+        .post('/api/data')
         .send(testData)
         .expect(200);
 
@@ -133,100 +133,100 @@ describe("IOServer Integration Tests", () => {
     });
   });
 
-  describe("WebSocket Connections", () => {
-    it("should accept Socket.IO connections", (done) => {
-      const client = io("http://localhost:3003/test");
+  describe('WebSocket Connections', () => {
+    it('should accept Socket.IO connections', done => {
+      const client = io('http://localhost:3003/test');
 
-      client.on("connect", () => {
+      client.on('connect', () => {
         expect(client.connected).toBe(true);
         client.disconnect();
         done();
       });
 
-      client.on("connect_error", (error: any) => {
+      client.on('connect_error', (error: any) => {
         done(error);
       });
     });
 
-    it("should handle service events", (done) => {
-      const client = io("http://localhost:3003/test");
+    it('should handle service events', done => {
+      const client = io('http://localhost:3003/test');
 
-      client.on("connect", () => {
-        client.emit("hello", { message: "test" }, (response: any) => {
-          expect(response.status).toBe("success");
+      client.on('connect', () => {
+        client.emit('hello', { message: 'test' }, (response: any) => {
+          expect(response.status).toBe('success');
           client.disconnect();
           done();
         });
       });
 
-      client.on("connect_error", (error: any) => {
+      client.on('connect_error', (error: any) => {
         done(error);
       });
     });
 
-    it("should echo data correctly", (done) => {
-      const client = io("http://localhost:3003/test");
-      const testData = { test: "data", number: 42 };
+    it('should echo data correctly', done => {
+      const client = io('http://localhost:3003/test');
+      const testData = { test: 'data', number: 42 };
 
-      client.on("connect", () => {
-        client.emit("echo", testData);
+      client.on('connect', () => {
+        client.emit('echo', testData);
       });
 
-      client.on("echo_response", (data: any) => {
+      client.on('echo_response', (data: any) => {
         expect(data).toEqual(testData);
         client.disconnect();
         done();
       });
 
-      client.on("connect_error", (error: any) => {
+      client.on('connect_error', (error: any) => {
         done(error);
       });
     });
 
-    it("masks unexpected service errors with a generic payload", (done) => {
-      const client = io("http://localhost:3003/test");
+    it('masks unexpected service errors with a generic payload', done => {
+      const client = io('http://localhost:3003/test');
 
-      client.on("connect", () => {
-        client.emit("boom", {}, (response: any) => {
-          expect(response.status).toBe("error");
+      client.on('connect', () => {
+        client.emit('boom', {}, (response: any) => {
+          expect(response.status).toBe('error');
           expect(response.statusCode).toBe(500);
-          expect(response.type).toBe("Error");
+          expect(response.type).toBe('Error');
           // The sensitive internal message must NOT leak to the client.
-          expect(response.message).toBe("Internal Server Error");
-          expect(response.message).not.toContain("sensitive");
+          expect(response.message).toBe('Internal Server Error');
+          expect(response.message).not.toContain('sensitive');
           client.disconnect();
           done();
         });
       });
 
-      client.on("connect_error", (error: any) => done(error));
+      client.on('connect_error', (error: any) => done(error));
     });
 
-    it("surfaces intentional IOServerError details to the client", (done) => {
-      const client = io("http://localhost:3003/test");
+    it('surfaces intentional IOServerError details to the client', done => {
+      const client = io('http://localhost:3003/test');
 
-      client.on("connect", () => {
-        client.emit("boomTyped", {}, (response: any) => {
-          expect(response.status).toBe("error");
+      client.on('connect', () => {
+        client.emit('boomTyped', {}, (response: any) => {
+          expect(response.status).toBe('error');
           expect(response.statusCode).toBe(400);
-          expect(response.type).toBe("IOServerError");
-          expect(response.message).toBe("Explicit business error");
+          expect(response.type).toBe('IOServerError');
+          expect(response.message).toBe('Explicit business error');
           client.disconnect();
           done();
         });
       });
 
-      client.on("connect_error", (error: any) => done(error));
+      client.on('connect_error', (error: any) => done(error));
     });
   });
 
-  describe("Error Handling", () => {
-    it("should handle malformed Socket.IO events gracefully", (done) => {
-      const client = io("http://localhost:3003/test");
+  describe('Error Handling', () => {
+    it('should handle malformed Socket.IO events gracefully', done => {
+      const client = io('http://localhost:3003/test');
 
-      client.on("connect", () => {
+      client.on('connect', () => {
         // Send event to non-existent handler
-        client.emit("nonexistent_event", { data: "test" });
+        client.emit('nonexistent_event', { data: 'test' });
 
         // Should not crash the server
         setTimeout(() => {
@@ -236,7 +236,7 @@ describe("IOServer Integration Tests", () => {
         }, 100);
       });
 
-      client.on("connect_error", (error: any) => {
+      client.on('connect_error', (error: any) => {
         done(error);
       });
     });

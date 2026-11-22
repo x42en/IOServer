@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] — 2026-11-22
+
+### Added
+
+- `bodyLimit`, `maxHttpBufferSize` and `trustProxy` options for explicit
+  request-size and reverse-proxy configuration.
+- `events` allowlist on `addService` to expose only an explicit set of
+  Socket.IO handlers.
+
+### Security
+
+- Static serving now ignores dotfiles, so `.env`, `.git` and similar files
+  cannot be downloaded when `rootDir` contains them.
+- SPA fallback only handles `GET` and `HEAD` and never answers dotfile paths;
+  unmatched API methods receive the standard 404 JSON response.
+- Non-`IOServerError` failures, including thrown strings, are masked as
+  `Internal Server Error`. Fastify 4xx errors now keep their status code and
+  return a generic status message without parser or framework details.
+- `stop()` closes the Socket.IO server before Fastify, so active WebSocket
+  clients no longer block shutdown.
+- Component names are validated, `__proto__`/`constructor`/`Object.prototype`
+  names are rejected, and managers are attached with `Object.defineProperty`
+  to prevent `AppHandle` prototype pollution.
+- Service methods prefixed with `_` are never exposed; the chat example's
+  private helpers were renamed accordingly. TypeScript `private` is documented
+  as a compile-time-only guard.
+- CORS credentials combined with a wildcard origin are rejected at startup.
+
+### Fixed
+
+- Duplicate component registrations keep `409`, and invalid names keep `400`
+  instead of being wrapped as `500`.
+- Missing or invalid route handlers now fail controller registration instead
+  of being logged and silently skipped.
+- Invalid `routes`, `mode` and `verbose` options fail at startup instead of
+  silently falling back to defaults.
+- Socket.IO initialization is awaited through a single promise with a handled
+  rejection path instead of a fixed retry loop.
+- `sendTo` returns `false` for an unknown socket id.
+- Chat example: usernames and room names are HTML-escaped, message history and
+  room counts are bounded, and message payloads are type-checked.
+- Fastify router options moved under `routerOptions` for Fastify 6 readiness.
+- README and documentation now use `appHandle`, correct option defaults, and
+  accurate HTTP/Socket.IO middleware signatures.
+
+### Changed
+
+- `IOServer` split into focused modules (`config`, `naming`, `http`, `socket`,
+  `types`) to keep the main class under the file-size ceiling.
+
 ## [2.3.0] — 2026-11-04
 
 ### Changed
@@ -131,7 +181,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Releases prior to 2.0.0 are documented in the
 > [Git history](https://github.com/x42en/IOServer/releases).
 
-[Unreleased]: https://github.com/x42en/IOServer/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/x42en/IOServer/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/x42en/IOServer/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/x42en/IOServer/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/x42en/IOServer/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/x42en/IOServer/compare/v2.1.2...v2.2.0

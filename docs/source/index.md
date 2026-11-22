@@ -23,9 +23,9 @@ IOServer combines the speed of [Fastify](https://www.fastify.io/) with the real-
 - 🚄 **High Performance** - Built on Fastify for maximum HTTP throughput
 - ⚡ **Real-time Communication** - Integrated Socket.IO for WebSocket connections
 - 🏗️ **Modular Architecture** - Clean separation with Services, Controllers, Managers, and Watchers
-- 🔒 **Security First** - Built-in CORS, error handling, and validation
+- 🔒 **Secure Defaults** - CORS allowlisting, error message masking, and dotfile protection
 - 📝 **TypeScript Native** - Full type safety and IntelliSense support
-- 🧪 **Fully Tested** - Comprehensive test suite with 95%+ coverage
+- 🧪 **Tested** - Unit, integration, end-to-end and performance scenarios
 - 🔧 **Configuration Driven** - JSON-based routing and flexible configuration
 - 📦 **Production Ready** - Memory leak detection, performance monitoring, and error handling
 

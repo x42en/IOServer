@@ -42,6 +42,11 @@ interface IOServerOptions {
   cors?: CorsOptions; // CORS configuration
   mode?: TransportMode[]; // Socket.IO transport modes
   cookie?: boolean; // Enable cookies (default: false)
+  bodyLimit?: number; // Maximum HTTP request body size
+  maxHttpBufferSize?: number; // Maximum Socket.IO message size
+  trustProxy?: boolean; // Trust reverse-proxy headers
+  rootDir?: string; // Static files directory
+  spaFallback?: boolean; // SPA fallback for GET/HEAD (default: true with rootDir)
 }
 ```
 
@@ -288,6 +293,7 @@ interface ServiceOptions {
   name?: string; // Service namespace
   service: new (appHandle: AppHandle) => any; // Service class
   middlewares?: (new () => any)[]; // Middleware classes
+  events?: string[]; // Explicit Socket.IO event allowlist
 }
 ```
 

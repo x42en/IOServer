@@ -34,7 +34,7 @@ class SimpleController extends BaseController {
     reply.send({
       status: "OK",
       timestamp: Date.now(),
-      version: "2.3.0",
+      version: "2.4.0",
     });
   }
 }

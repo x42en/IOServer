@@ -4,7 +4,7 @@ export class ChatWatcher extends BaseWatcher {
   private readonly CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutes
   private readonly STATS_INTERVAL = 5 * 60 * 1000; // 5 minutes
   private readonly MAX_MESSAGES_PER_ROOM = 1000;
-  private intervals: NodeJS.Timeout[] = [];
+  private intervals: ReturnType<typeof setInterval>[] = [];
 
   async watch(): Promise<void> {
     this.appHandle.log(6, 'ChatWatcher started');

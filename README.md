@@ -97,7 +97,7 @@ class AppManager extends BaseManager {
 // --- Service: WebSocket events ---
 class ChatService extends BaseService {
   async sendMessage(socket: any, data: { text: string }, callback?: Function) {
-    const mgr = this.app.getManager('app') as AppManager;
+    const mgr = this.appHandle.app as AppManager;
     mgr.increment();
     socket.broadcast.emit('message', {
       text: data.text,
@@ -110,7 +110,7 @@ class ChatService extends BaseService {
 // --- Controller: HTTP endpoints ---
 class StatsController extends BaseController {
   async getStats(request: any, reply: any) {
-    const mgr = this.app.getManager('app') as AppManager;
+    const mgr = this.appHandle.app as AppManager;
     reply.send({ messages: mgr.getCount() });
   }
 }
@@ -131,7 +131,9 @@ await server.start();
 
 ### Services — WebSocket event handlers
 
-A Service groups Socket.IO event handlers. Each public method of the class is automatically bound to the Socket.IO event `<method_name>`.
+A Service groups Socket.IO event handlers. Every method not prefixed with `_` is automatically bound to the Socket.IO event `<method_name>`.
+
+> TypeScript `private` is a compile-time-only guard. Prefix internal helpers with `_` (or use ECMAScript `#private` methods) so they are never exposed as remote events. For an explicit surface, pass `events`.
 
 ```typescript
 import { BaseService } from 'ioserver';
@@ -147,6 +149,10 @@ class RoomService extends BaseService {
   async leave(socket: Socket, data: { room: string }) {
     socket.leave(data.room);
   }
+
+  private _authorize(socket: Socket, room: string) {
+    // not exposed: underscore-prefixed
+  }
 }
 
 server.addService({ name: 'room', service: RoomService });
@@ -159,6 +165,7 @@ Registration options:
 | `name`        | `string`             | Namespace name (used as Socket.IO namespace `/name`) |
 | `service`     | `typeof BaseService` | Service class (not an instance)                      |
 | `middlewares` | `BaseMiddleware[]`   | Optional middleware chain for this namespace         |
+| `events`      | `string[]`           | Explicit event allowlist (overrides auto-discovery)  |
 
 ### Controllers — HTTP route handlers
 
@@ -206,7 +213,7 @@ Registration options:
 
 ### Managers — Injectable singletons
 
-Managers hold shared state and business logic. They are instantiated once and exposed to every Service, Controller, and Watcher through `this.app`.
+Managers hold shared state and business logic. They are instantiated once and exposed to every Service, Controller, and Watcher through `this.appHandle`.
 
 ```typescript
 import { BaseManager } from 'ioserver';
@@ -228,7 +235,7 @@ class CacheManager extends BaseManager {
 server.addManager({ name: 'cache', manager: CacheManager });
 
 // In any other component:
-const cache = this.app.getManager('cache') as CacheManager;
+const cache = this.appHandle.cache as CacheManager;
 cache.set('session:42', { userId: 42 });
 ```
 
@@ -246,7 +253,7 @@ class CleanupWatcher extends BaseWatcher {
 
   async watch() {
     this.timer = setInterval(async () => {
-      const cache = this.app.getManager('cache') as CacheManager;
+      const cache = this.appHandle.cache as CacheManager;
       // periodic cleanup logic
     }, 60_000);
   }
@@ -264,7 +271,9 @@ server.addWatcher({ name: 'cleanup', watcher: CleanupWatcher });
 
 ### Middlewares — Request and connection guards
 
-Middlewares intercept HTTP requests (Fastify `preHandler`) and Socket.IO connections before they reach Controllers or Services.
+Middlewares intercept HTTP requests (Fastify `preValidation`) and Socket.IO connections before they reach Controllers or Services. `handle(appHandle)` returns the guard function; the framework calls it for every request or connection.
+
+HTTP and Socket.IO guards use different signatures, so keep them in separate middleware classes.
 
 ```typescript
 import { BaseMiddleware } from 'ioserver';
@@ -272,22 +281,14 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Socket } from 'socket.io';
 
 class AuthMiddleware extends BaseMiddleware {
-  // HTTP guard
-  async handle(request: FastifyRequest, reply: FastifyReply, next: Function) {
-    const token = request.headers.authorization?.split(' ')[1];
-    if (!token || !this.verify(token)) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-    next();
-  }
-
-  // WebSocket guard
-  async handleSocket(socket: Socket, next: Function) {
-    const token = socket.handshake.auth?.token;
-    if (!token || !this.verify(token)) {
-      return next(new Error('Unauthorized'));
-    }
-    next();
+  handle() {
+    return (request: FastifyRequest, reply: FastifyReply, done: Function) => {
+      const token = request.headers.authorization?.split(' ')[1];
+      if (!token || !this.verify(token)) {
+        return reply.code(401).send({ error: 'Unauthorized' });
+      }
+      done();
+    };
   }
 
   private verify(token: string) {
@@ -295,11 +296,28 @@ class AuthMiddleware extends BaseMiddleware {
   }
 }
 
-// Apply to a specific controller or service
+class SocketAuthMiddleware extends BaseMiddleware {
+  handle() {
+    return (socket: Socket, next: Function) => {
+      const token = socket.handshake.auth?.token;
+      if (!token) {
+        return next(new Error('Unauthorized'));
+      }
+      next();
+    };
+  }
+}
+
 server.addController({
   name: 'admin',
   controller: AdminController,
   middlewares: [AuthMiddleware],
+});
+
+server.addService({
+  name: 'chat',
+  service: ChatService,
+  middlewares: [SocketAuthMiddleware],
 });
 ```
 
@@ -309,17 +327,20 @@ server.addController({
 const server = new IOServer(options);
 ```
 
-| Option        | Type                 | Default                   | Description                                          |
-| ------------- | -------------------- | ------------------------- | ---------------------------------------------------- |
-| `host`        | `string`             | `'localhost'`             | Bind address                                         |
-| `port`        | `number`             | `8080`                    | Listen port                                          |
-| `verbose`     | `string`             | `'ERROR'`                 | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)      |
-| `cookie`      | `boolean`            | `false`                   | Enable Socket.IO cookies                             |
-| `mode`        | `string \| string[]` | `['websocket','polling']` | Socket.IO transport(s)                               |
-| `cors`        | `object`             | `undefined`               | Fastify CORS options (applied to HTTP and Socket.IO) |
-| `routes`      | `string`             | `'./routes'`              | Directory containing JSON route files                |
-| `rootDir`     | `string`             | `'.'`                     | Root directory for static file serving               |
-| `spaFallback` | `boolean`            | `false`                   | Serve `index.html` for unmatched routes (SPA mode)   |
+| Option              | Type                 | Default                   | Description                                                     |
+| ------------------- | -------------------- | ------------------------- | --------------------------------------------------------------- |
+| `host`              | `string`             | `'localhost'`             | Bind address                                                    |
+| `port`              | `number`             | `8080`                    | Listen port                                                     |
+| `verbose`           | `string`             | `'ERROR'`                 | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                 |
+| `cookie`            | `boolean`            | `false`                   | Enable Socket.IO cookies                                        |
+| `mode`              | `string \| string[]` | `['websocket','polling']` | Socket.IO transport(s); invalid values throw                    |
+| `cors`              | `object`             | `undefined`               | Fastify CORS options (applied to HTTP and Socket.IO)            |
+| `routes`            | `string`             | `'./routes'`              | Directory containing JSON route files; must exist when supplied |
+| `bodyLimit`         | `number`             | Fastify default           | Maximum HTTP request body size in bytes                         |
+| `maxHttpBufferSize` | `number`             | Socket.IO default         | Maximum Socket.IO message size in bytes                         |
+| `trustProxy`        | `boolean`            | `false`                   | Trust reverse-proxy headers                                     |
+| `rootDir`           | `string`             | `undefined`               | Static files directory (dotfiles are not served)                |
+| `spaFallback`       | `boolean`            | `true` with `rootDir`     | Serve `index.html` for unknown GET/HEAD routes                  |
 
 ### CORS example
 

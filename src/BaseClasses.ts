@@ -5,11 +5,11 @@
  * for Services, Controllers, Managers, Watchers, and Middlewares in the IOServer framework.
  *
  * @author Ben Mz <0x42en@users.noreply.github.com>
- * @version 2.3.0
+ * @version 2.4.0
  * @since 1.0.0
  */
 
-import { AppHandle } from './IOServer';
+import type { AppHandle } from './types';
 
 /**
  * Abstract base class for real-time services

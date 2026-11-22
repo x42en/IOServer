@@ -1,12 +1,14 @@
 # IOServer Chat Application
 
-A complete real-time chat application built with IOServer v2.0.0 demonstrating all framework features.
+A complete real-time chat application built with IOServer v2.4.0 demonstrating all framework features.
+
+> This example is a UI and framework demonstration. Its username-only login is **not authentication** and must not be used in production. Add a real authentication middleware and authorization checks before exposing it.
 
 ## Features
 
-✅ **User Authentication**
+✅ **Username-Based Demo Session**
 
-- Username-only login (no password required)
+- Username-only login (no password, demo only)
 - Unique username validation
 - Automatic join to default room
 
@@ -48,19 +50,19 @@ A complete real-time chat application built with IOServer v2.0.0 demonstrating a
 1. **Install dependencies:**
 
    ```bash
-   npm install
+   pnpm install
    ```
 
 2. **Build the project:**
 
    ```bash
-   npm run build
+   pnpm build
    ```
 
 3. **Start the chat app:**
 
    ```bash
-   npm run dev examples/chat-app/app.ts
+   pnpm dev:chat
    ```
 
 4. **Open your browser:**
@@ -223,7 +225,7 @@ Open multiple browser tabs to test:
 1. Build the application:
 
    ```bash
-   npm run build
+   pnpm build
    ```
 
 2. Start the server:

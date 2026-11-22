@@ -315,7 +315,7 @@ export class ChatController extends BaseController {
         let currentUser = '';
         let currentRoom = 'general';
         let typingTimeout;
-        let unreadMessages = {};
+        let unreadMessages = Object.create(null);
         
         // DOM Elements
         const loginForm = document.getElementById('loginForm');
@@ -394,7 +394,7 @@ export class ChatController extends BaseController {
             if (message.type !== 'system') {
                 messageEl.innerHTML = \`
                     <div class="message-header">
-                        \${message.username} • \${new Date(message.timestamp).toLocaleTimeString()}
+                        \${escapeHtml(message.username)} • \${new Date(message.timestamp).toLocaleTimeString()}
                     </div>
                     <div>\${escapeHtml(message.content)}</div>
                 \`;
@@ -440,7 +440,7 @@ export class ChatController extends BaseController {
                 const li = document.createElement('li');
                 li.className = 'room-item' + (room.name === currentRoom ? ' active' : '');
                 li.innerHTML = \`
-                    \${room.name} (\${room.userCount})
+                    \${escapeHtml(room.name)} (\${room.userCount})
                     \${unreadMessages[room.name] ? \`<span class="notification-badge">\${unreadMessages[room.name]}</span>\` : ''}
                 \`;
                 li.onclick = () => joinRoom(room.name);
@@ -552,11 +552,6 @@ export class ChatController extends BaseController {
             div.textContent = text;
             return div.innerHTML;
         }
-        
-        // Handle disconnect
-        socket.on('disconnect', () => {
-            socket.emit('disconnect');
-        });
     </script>
 </body>
 </html>
@@ -570,7 +565,7 @@ export class ChatController extends BaseController {
       status: "OK",
       timestamp: new Date().toISOString(),
       service: "IOServer Chat App",
-      version: "2.3.0",
+      version: "2.4.0",
     });
   }
 }

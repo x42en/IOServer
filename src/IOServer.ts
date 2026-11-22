@@ -4,24 +4,52 @@
  * Services, Controllers, Managers, and Watchers.
  *
  * @author Ben Mz <0x42en@users.noreply.github.com>
- * @version 2.3.0
+ * @version 2.4.0
  * @since 1.0.0
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { setTimeout } from 'timers/promises';
-import fastify, {
-  FastifyInstance,
-  FastifyRequest,
-  FastifyReply,
-  RouteOptions,
-} from 'fastify';
+import fastify, { FastifyInstance, RouteOptions } from 'fastify';
 import { Server as SocketIOServer } from 'socket.io';
-import cors from '@fastify/cors';
-import sensible from '@fastify/sensible';
-import fastifyStatic from '@fastify/static';
 import { IOServerError } from './IOServerError';
+import {
+  DEFAULT_HOST,
+  DEFAULT_PORT,
+  LOG_LEVELS,
+  processCorsOptions,
+  processTransportModes,
+  resolveRootDir,
+  resolveRoutesPath,
+  validateLogLevel,
+  validatePort,
+  validatePositiveInteger,
+} from './config';
+import { dumpMethods, validateName } from './naming';
+import { setupHttp } from './http';
+import { createConnectionHandler, createSocketIOServer } from './socket';
+import type {
+  IOServerOptions,
+  ServiceOptions,
+  ControllerOptions,
+  ManagerOptions,
+  WatcherOptions,
+  SendToOptions,
+  AppHandle,
+  LogLevel,
+} from './types';
+
+export type {
+  IOServerOptions,
+  ServiceOptions,
+  ControllerOptions,
+  ManagerOptions,
+  WatcherOptions,
+  SendToOptions,
+  AppHandle,
+  LogLevel,
+  TransportMode,
+} from './types';
 
 // Extend Fastify instance to include Socket.IO
 declare module 'fastify' {
@@ -29,142 +57,6 @@ declare module 'fastify' {
     io: SocketIOServer;
   }
 }
-
-/**
- * Configuration options for IOServer instance
- * @interface IOServerOptions
- */
-export interface IOServerOptions {
-  /** Logging verbosity level - defaults to 'ERROR' */
-  verbose?: string;
-  /** Server hostname - defaults to 'localhost' */
-  host?: string;
-  /** Server port number - defaults to 8080 */
-  port?: number;
-  /** Enable Socket.IO cookies - defaults to false */
-  cookie?: boolean;
-  /** Transport modes for Socket.IO - defaults to ['websocket', 'polling'] */
-  mode?: TransportMode | TransportMode[];
-  /** CORS configuration options */
-  cors?: any;
-  /** Path to routes directory - defaults to './routes' */
-  routes?: string;
-  /**
-   * Absolute path to the directory containing static files to serve (e.g. a
-   * built SPA). When provided and the directory exists, IOServer registers
-   * \@fastify/static with that root and serves files at prefix "/".
-   * If the directory does not exist a warning is logged and static serving
-   * is silently disabled (safe to always set in code, even in dev).
-   */
-  rootDir?: string;
-  /**
-   * When true (default) and rootDir is active, any request that does not
-   * match an API route or a static file is answered with `index.html` so
-   * that client-side routers (Vue Router, React Router, …) work correctly.
-   * Set to false to keep the standard 404 JSON response instead.
-   */
-  spaFallback?: boolean;
-}
-
-/**
- * Configuration options for registering a Service
- * @interface ServiceOptions
- */
-export interface ServiceOptions {
-  /** Service namespace (optional, defaults to '/') */
-  name?: string;
-  /** Service class constructor that extends BaseService */
-  service: new (appHandle: AppHandle) => any;
-  /** Array of middleware classes to apply to this service */
-  middlewares?: (new () => any)[];
-}
-
-/**
- * Configuration options for registering a Controller
- * @interface ControllerOptions
- */
-export interface ControllerOptions {
-  /** Controller name that matches the route file name */
-  name: string;
-  /** Controller class constructor that extends BaseController */
-  controller: new (appHandle: AppHandle) => any;
-  /** Array of middleware classes to apply to this controller */
-  middlewares?: (new () => any)[];
-  /** URL prefix for all routes in this controller */
-  prefix?: string;
-}
-
-/**
- * Configuration options for registering a Manager
- * @interface ManagerOptions
- */
-export interface ManagerOptions {
-  /** Manager name (used as property name in appHandle) */
-  name: string;
-  /** Manager class constructor that extends BaseManager */
-  manager: new (appHandle: AppHandle) => any;
-}
-
-/**
- * Configuration options for registering a Watcher
- * @interface WatcherOptions
- */
-export interface WatcherOptions {
-  /** Watcher name for identification */
-  name: string;
-  /** Watcher class constructor that extends BaseWatcher */
-  watcher: new (appHandle: AppHandle) => any;
-}
-
-/**
- * Options for sending real-time messages to clients
- * @interface SendToOptions
- */
-export interface SendToOptions {
-  /** Target namespace (optional, defaults to '/') */
-  namespace?: string;
-  /** Event name to emit */
-  event: string;
-  /** Data payload to send */
-  data: any;
-  /** Target specific room (optional) */
-  room?: string;
-  /** Target specific socket ID (optional) */
-  sid?: string;
-}
-
-/**
- * Application handle providing shared functionality across all components
- * @interface AppHandle
- */
-export interface AppHandle {
-  /** Function to send real-time messages to clients */
-  send: (options: SendToOptions) => boolean;
-  /** Logging function with level-based filtering */
-  log: (level: number, text: string) => void;
-  /** Current logging verbosity level */
-  verbose: LogLevel;
-  /** Dynamic properties for registered managers */
-  [key: string]: any;
-}
-
-/**
- * Log levels for controlling verbosity of output
- */
-export type LogLevel =
-  | 'EMERGENCY' // Level 0 - System is unusable
-  | 'ALERT' // Level 1 - Action must be taken immediately
-  | 'CRITICAL' // Level 2 - Critical conditions
-  | 'ERROR' // Level 3 - Error conditions
-  | 'WARNING' // Level 4 - Warning conditions
-  | 'NOTIFICATION' // Level 5 - Normal but significant condition
-  | 'INFORMATION' // Level 6 - Informational messages
-  | 'DEBUG'; // Level 7 - Debug-level messages
-
-/**
- * Transport modes supported by Socket.IO
- */
-export type TransportMode = 'websocket' | 'polling';
 
 /**
  * Main IOServer class - A framework for building real-time applications
@@ -186,24 +78,7 @@ export type TransportMode = 'websocket' | 'polling';
  * ```
  */
 export class IOServer {
-  private static readonly VERSION = '2.3.0';
-  private static readonly DEFAULT_PORT = 8080;
-  private static readonly DEFAULT_HOST = 'localhost';
-  private static readonly LOG_LEVELS: LogLevel[] = [
-    'EMERGENCY',
-    'ALERT',
-    'CRITICAL',
-    'ERROR',
-    'WARNING',
-    'NOTIFICATION',
-    'INFORMATION',
-    'DEBUG',
-  ];
-  private static readonly TRANSPORTS: TransportMode[] = [
-    'websocket',
-    'polling',
-  ];
-  private static readonly RESERVED_NAMES = ['send', 'log', 'verbose'];
+  private static readonly VERSION = '2.4.0';
 
   private readonly host: string;
   private readonly port: number;
@@ -214,6 +89,8 @@ export class IOServer {
   private readonly webapp: FastifyInstance;
   private socketio!: SocketIOServer;
   private readonly appHandle: AppHandle;
+  private socketReady!: Promise<void>;
+  private socketSetupError: IOServerError | undefined;
 
   private readonly serviceLists: Map<string, any> = new Map();
   private readonly managerLists: Map<string, any> = new Map();
@@ -227,40 +104,42 @@ export class IOServer {
    * @param {IOServerOptions} options - Configuration options for the server
    */
   constructor(options: IOServerOptions = {}) {
-    this.host = options.host || IOServer.DEFAULT_HOST;
-    this.port = this.validatePort(options.port || IOServer.DEFAULT_PORT);
-    this.verbose = this.validateLogLevel(options.verbose || 'ERROR');
-
-    const defaultRoutes = path.join(process.cwd(), 'routes');
-    this.routesPath =
-      options.routes && fs.existsSync(options.routes)
-        ? options.routes
-        : defaultRoutes;
-
-    // Static files directory — silently disabled when the path does not exist
-    if (options.rootDir) {
-      if (fs.existsSync(options.rootDir)) {
-        this.rootDir = options.rootDir;
-      } else {
-        this.log(
-          4,
-          `[!] Static files directory not found, static serving disabled: ${options.rootDir}`
-        );
-        this.rootDir = undefined;
-      }
-    } else {
-      this.rootDir = undefined;
-    }
-    // spaFallback defaults to true whenever rootDir is active
+    this.host = options.host || DEFAULT_HOST;
+    this.port = validatePort(options.port ?? DEFAULT_PORT);
+    this.verbose = validateLogLevel(options.verbose || 'ERROR');
+    this.routesPath = resolveRoutesPath(options.routes);
+    this.rootDir = resolveRootDir(options.rootDir, this.log.bind(this));
     this.spaFallback = options.spaFallback !== false;
 
-    const transportModes = this.processTransportModes(options.mode);
-    const corsOptions = this.processCorsOptions(options.cors);
+    const transportModes = processTransportModes(options.mode);
+    const corsOptions = processCorsOptions(options.cors, this.host);
     const cookieEnabled = Boolean(options.cookie);
 
-    this.webapp = this.initializeFastify();
-    this.setupPlugins(corsOptions, this.rootDir, this.spaFallback);
-    this.setupSocketIO(transportModes, cookieEnabled, corsOptions);
+    this.webapp = this.initializeFastify(options.bodyLimit, options.trustProxy);
+    setupHttp(
+      this.webapp,
+      corsOptions,
+      this.rootDir,
+      this.spaFallback,
+      this.log.bind(this)
+    );
+    this.socketReady = createSocketIOServer(
+      this.webapp,
+      transportModes,
+      cookieEnabled,
+      corsOptions,
+      options.maxHttpBufferSize
+    )
+      .then(socketio => {
+        this.socketio = socketio;
+        this.log(6, '[*] Socket.IO server attached to HTTP server');
+      })
+      .catch((error: unknown) => {
+        this.socketSetupError = new IOServerError(
+          `Unable to setup Socket.IO: ${error}`,
+          500
+        );
+      });
 
     this.appHandle = {
       send: this.sendTo.bind(this),
@@ -269,175 +148,34 @@ export class IOServer {
     };
   }
 
-  private validatePort(port: number): number {
-    const numPort = Number(port);
-    if (isNaN(numPort) || numPort <= 0 || numPort > 65535) {
-      throw new IOServerError('Invalid port number', 400);
-    }
-    return numPort;
-  }
-
-  private validateLogLevel(level: string): LogLevel {
-    const upperLevel = level.toUpperCase() as LogLevel;
-    return IOServer.LOG_LEVELS.includes(upperLevel) ? upperLevel : 'ERROR';
-  }
-
-  private processTransportModes(
-    mode?: TransportMode | TransportMode[]
-  ): TransportMode[] {
-    if (!mode) {
-      return ['websocket', 'polling'];
-    }
-
-    const modes: TransportMode[] = [];
-    if (typeof mode === 'string') {
-      if (IOServer.TRANSPORTS.includes(mode)) {
-        modes.push(mode);
-      }
-    } else if (Array.isArray(mode)) {
-      mode.forEach(m => {
-        if (IOServer.TRANSPORTS.includes(m)) {
-          modes.push(m);
-        }
-      });
-    }
-
-    return modes.length > 0 ? modes : ['websocket', 'polling'];
-  }
-
-  private processCorsOptions(cors?: any): any {
-    const corsConfig = cors || {};
-
-    if (!corsConfig.methods) {
-      corsConfig.methods = ['GET', 'POST'];
-    }
-
-    if (!corsConfig.origin) {
-      corsConfig.origin = [`https://${this.host}`, `http://${this.host}`];
-    }
-
-    return corsConfig;
-  }
-
-  private initializeFastify(): FastifyInstance {
+  private initializeFastify(
+    bodyLimit?: number,
+    trustProxy?: boolean
+  ): FastifyInstance {
     try {
       return fastify({
         logger: this.verbose === 'DEBUG',
-        ignoreTrailingSlash: true,
-        maxParamLength: 200,
-        caseSensitive: true,
+        trustProxy: trustProxy ?? false,
+        bodyLimit:
+          bodyLimit === undefined
+            ? undefined
+            : validatePositiveInteger(bodyLimit, 'bodyLimit'),
+        routerOptions: {
+          ignoreTrailingSlash: true,
+          maxParamLength: 200,
+          caseSensitive: true,
+        },
       });
     } catch (error) {
+      if (error instanceof IOServerError) {
+        throw error;
+      }
       throw new IOServerError(`Unable to initialize server: ${error}`, 500);
     }
   }
 
-  private setupPlugins(
-    corsOptions: any,
-    rootDir?: string,
-    spaFallback: boolean = true
-  ): void {
-    try {
-      // Register sensible plugin for HTTP shortcuts
-      this.webapp.register(sensible);
-
-      // Register CORS plugin with secure defaults
-      this.webapp.register(cors, {
-        ...corsOptions,
-        credentials: corsOptions?.credentials ?? false, // Default to false for security
-        optionsSuccessStatus: 204, // For CORS preflight requests
-      });
-
-      // Register @fastify/static when a rootDir was supplied and validated
-      if (rootDir) {
-        this.webapp.register(fastifyStatic, {
-          root: rootDir,
-          prefix: '/',
-          // Do not decorate reply a second time if already done (e.g. tests)
-          decorateReply: true,
-        });
-        this.log(6, `[*] Serving static files from: ${rootDir}`);
-      }
-
-      // 404 handler — SPA fallback when rootDir is active, generic JSON otherwise
-      if (rootDir && spaFallback) {
-        // Serve index.html for any unmatched route so client-side routers work.
-        // Registered API routes (controllers) always take priority in Fastify.
-        this.webapp.setNotFoundHandler((_request, reply) => {
-          reply.sendFile('index.html');
-        });
-      } else {
-        this.webapp.setNotFoundHandler((request, reply) => {
-          reply.code(404).send({
-            statusCode: 404,
-            error: 'Not Found',
-            message: `Route ${request.method}:${request.url} not found`,
-          });
-        });
-      }
-
-      // Setup error handler
-      this.webapp.setErrorHandler(
-        (error: any, request: FastifyRequest, reply: FastifyReply) => {
-          if (error instanceof IOServerError) {
-            reply.status(error.statusCode).send({
-              statusCode: error.statusCode,
-              error: error.name,
-              message: error.message,
-            });
-          } else if (error.status) {
-            reply.status(error.status).send({
-              statusCode: error.status,
-              error: error.name || 'Error',
-              message: error.message,
-            });
-          } else {
-            // Unhandled internal error: never leak the original message
-            // (stack traces, DB driver details, file paths, …) to the client.
-            // Log the detail server-side and return a generic response.
-            this.log(
-              3,
-              `[!] Unhandled error on ${request.method}:${request.url}: ${error?.stack || error}`
-            );
-            reply.status(500).send({
-              statusCode: 500,
-              error: 'Internal Server Error',
-              message: 'Internal Server Error',
-            });
-          }
-        }
-      );
-    } catch (error) {
-      throw new IOServerError(`Unable to setup plugins: ${error}`, 500);
-    }
-  }
-
-  private setupSocketIO(
-    transportModes: TransportMode[],
-    cookieEnabled: boolean,
-    corsOptions: any
-  ): void {
-    try {
-      // Create Socket.IO server immediately, but it will attach when Fastify starts
-      this.webapp.ready().then(() => {
-        this.socketio = new SocketIOServer(this.webapp.server, {
-          transports: transportModes as any[],
-          cookie: cookieEnabled,
-          cors: corsOptions,
-        });
-
-        // Add io property to webapp for compatibility
-        (this.webapp as any).io = this.socketio;
-
-        this.log(6, '[*] Socket.IO server attached to HTTP server');
-      });
-    } catch (error) {
-      throw new IOServerError(`Unable to setup Socket.IO: ${error}`, 500);
-    }
-  }
-
   public log(level: number, text: string): void {
-    const currentLevel = IOServer.LOG_LEVELS.indexOf(this.verbose);
+    const currentLevel = LOG_LEVELS.indexOf(this.verbose);
 
     if (level <= currentLevel) {
       if (level <= 4) {
@@ -448,26 +186,12 @@ export class IOServer {
     }
   }
 
-  private unique<T>(array: T[]): T[] {
-    return [...new Set(array)];
-  }
-
   private registerInternalClass(
     type: string,
     name: string,
     ClassConstructor: new (appHandle: AppHandle) => any
   ): void {
-    if (!name) {
-      throw new IOServerError('Name is mandatory', 400);
-    }
-
-    if (type !== 'service' && name.length < 2) {
-      throw new IOServerError('Name must be longer than 2 characters', 400);
-    }
-
-    if (IOServer.RESERVED_NAMES.includes(name)) {
-      throw new IOServerError('Sorry this is a reserved name', 400);
-    }
+    validateName(type, name);
 
     if (!ClassConstructor || !ClassConstructor.prototype) {
       throw new IOServerError('Must be a constructor function', 400);
@@ -482,10 +206,13 @@ export class IOServer {
       this.log(7, `[*] Register ${type} ${name}`);
       const instance = new ClassConstructor(this.appHandle);
       listMap.set(name, instance);
-      // Register managers immediatly
       if (type === 'manager') {
-        this.appHandle[name] = instance;
-        // Auto-load async start method if it exists
+        Object.defineProperty(this.appHandle, name, {
+          value: instance,
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        });
         if (typeof instance.start === 'function') {
           instance.start().catch((error: any) => {
             this.log(3, `[!] Error starting ${name} manager: ${error}`);
@@ -493,6 +220,9 @@ export class IOServer {
         }
       }
     } catch (error) {
+      if (error instanceof IOServerError) {
+        throw error;
+      }
       throw new IOServerError(`Error instantiating ${type}: ${error}`, 500);
     }
   }
@@ -521,21 +251,6 @@ export class IOServer {
     }
   }
 
-  private dumpMethods(
-    ClassConstructor: new (appHandle: AppHandle) => any
-  ): string[] {
-    const result: string[] = [];
-    let prototype = ClassConstructor.prototype;
-
-    while (prototype && Object.getPrototypeOf(prototype)) {
-      const names = Object.getOwnPropertyNames(prototype);
-      result.push(...names);
-      prototype = Object.getPrototypeOf(prototype);
-    }
-
-    return this.unique(result).sort();
-  }
-
   /**
    * Registers a watcher component for background tasks
    * @param {WatcherOptions} options - Watcher configuration options
@@ -545,6 +260,9 @@ export class IOServer {
     try {
       this.registerInternalClass('watcher', options.name, options.watcher);
     } catch (error) {
+      if (error instanceof IOServerError) {
+        throw error;
+      }
       throw new IOServerError(
         `Error while instantiating ${options.name} watcher: ${error}`,
         500
@@ -561,6 +279,9 @@ export class IOServer {
     try {
       this.registerInternalClass('manager', options.name, options.manager);
     } catch (error) {
+      if (error instanceof IOServerError) {
+        throw error;
+      }
       throw new IOServerError(
         `Error while instantiating ${options.name} manager: ${error}`,
         500
@@ -575,18 +296,51 @@ export class IOServer {
    */
   public addService(options: ServiceOptions): void {
     const name = options.name || '/';
+    const methods = options.events
+      ? this.validateServiceEvents(options.service, options.events)
+      : dumpMethods(options.service);
 
     try {
       this.registerInternalClass('service', name, options.service);
     } catch (error) {
+      if (error instanceof IOServerError) {
+        throw error;
+      }
       throw new IOServerError(
         `Error while instantiating ${name} service: ${error}`,
         500
       );
     }
 
-    this.methodLists.set(name, this.dumpMethods(options.service));
+    this.methodLists.set(name, methods);
     this.middlewareLists.set(name, options.middlewares || []);
+  }
+
+  private validateServiceEvents(
+    ClassConstructor: new (appHandle: AppHandle) => any,
+    events: string[]
+  ): string[] {
+    const available = new Set(dumpMethods(ClassConstructor));
+    const uniqueEvents = [...new Set(events)];
+
+    uniqueEvents.forEach(event => {
+      if (
+        typeof event !== 'string' ||
+        event.length === 0 ||
+        event.startsWith('_') ||
+        event === 'constructor'
+      ) {
+        throw new IOServerError(`Invalid service event: ${String(event)}`, 400);
+      }
+      if (!available.has(event)) {
+        throw new IOServerError(
+          `Service event is not implemented: ${event}`,
+          400
+        );
+      }
+    });
+
+    return uniqueEvents;
   }
 
   /**
@@ -598,7 +352,6 @@ export class IOServer {
     const middlewares = options.middlewares || [];
     let prefix = options.prefix;
 
-    // Sanitize prefix
     if (prefix) {
       if (!prefix.startsWith('/')) {
         prefix = `/${prefix}`;
@@ -608,6 +361,23 @@ export class IOServer {
       }
     }
 
+    validateName('controller', options.name);
+
+    const routeFile = path.join(this.routesPath, `${options.name}.json`);
+    if (!fs.existsSync(routeFile)) {
+      throw new IOServerError(`Routes file does not exist: ${routeFile}`, 404);
+    }
+
+    let routes: unknown;
+    try {
+      routes = JSON.parse(fs.readFileSync(routeFile, 'utf8'));
+    } catch (error) {
+      throw new IOServerError(
+        `Error loading routes for ${options.name}: ${error}`,
+        500
+      );
+    }
+
     try {
       this.registerInternalClass(
         'controller',
@@ -615,21 +385,21 @@ export class IOServer {
         options.controller
       );
     } catch (error) {
+      if (error instanceof IOServerError) {
+        throw error;
+      }
       throw new IOServerError(
         `Error while instantiating ${options.name} controller: ${error}`,
         500
       );
     }
 
-    const routeFile = path.join(this.routesPath, `${options.name}.json`);
-    if (!fs.existsSync(routeFile)) {
-      throw new IOServerError(`Routes file does not exist: ${routeFile}`, 404);
-    }
-
     try {
-      const routes = JSON.parse(fs.readFileSync(routeFile, 'utf8'));
       this.registerControllerRoutes(routes, options.name, prefix, middlewares);
     } catch (error) {
+      if (error instanceof IOServerError) {
+        throw error;
+      }
       throw new IOServerError(
         `Error loading routes for ${options.name}: ${error}`,
         500
@@ -638,52 +408,78 @@ export class IOServer {
   }
 
   private registerControllerRoutes(
-    routes: any[],
+    routes: unknown,
     controllerName: string,
     prefix?: string,
     middlewares: any[] = []
   ): void {
-    const controller = this.controllerLists.get(controllerName);
+    if (!Array.isArray(routes)) {
+      throw new IOServerError(
+        `Routes file for ${controllerName} must contain an array`,
+        500
+      );
+    }
 
-    routes.forEach(route => {
-      // Map controller methods to route handlers
-      const handlerOptions = [
-        'onRequest',
-        'preParsing',
-        'preValidation',
-        'preHandler',
-        'preSerialization',
-        'onSend',
-        'onResponse',
-        'handler',
-        'errorHandler',
-      ];
+    const controller = this.controllerLists.get(controllerName);
+    const handlerOptions = [
+      'onRequest',
+      'preParsing',
+      'preValidation',
+      'preHandler',
+      'preSerialization',
+      'onSend',
+      'onResponse',
+      'handler',
+      'errorHandler',
+    ];
+
+    routes.forEach((route: any) => {
+      if (!route || typeof route !== 'object') {
+        throw new IOServerError(
+          `Invalid route definition for controller ${controllerName}`,
+          500
+        );
+      }
 
       handlerOptions.forEach(option => {
-        if (route[option] && controller[route[option]]) {
-          route[option] = controller[route[option]].bind(controller);
+        if (route[option] !== undefined) {
+          if (typeof route[option] === 'string') {
+            const handler = controller?.[route[option]];
+            if (typeof handler !== 'function') {
+              throw new IOServerError(
+                `Handler ${route[option]} not found on controller ${controllerName}`,
+                500
+              );
+            }
+            route[option] = handler.bind(controller);
+          } else if (typeof route[option] !== 'function') {
+            throw new IOServerError(
+              `Route option ${option} must reference a controller method`,
+              500
+            );
+          }
         }
       });
 
-      // Set URL with prefix logic:
-      // 1. If custom prefix is provided, use it
-      // 2. Otherwise, use controller name as prefix (unless it's root route)
-      if (prefix !== undefined) {
-        // Custom prefix provided (can be empty string for no prefix)
-        route.url = prefix + route.url;
-      } else {
-        // Default behavior: use controller name as prefix unless route is "/"
-        if (route.url === '/' && controllerName !== 'root') {
-          // Keep root route as-is for main controllers
-          route.url = '/';
-        } else {
-          route.url = `/${controllerName}${route.url}`;
-        }
+      if (typeof route.handler !== 'function') {
+        throw new IOServerError(
+          `Route ${String(route.method)} ${String(route.url)} has no handler`,
+          500
+        );
       }
 
-      // Setup middleware
-      if (!route.preValidation) {
+      if (prefix !== undefined) {
+        route.url = prefix + route.url;
+      } else if (route.url === '/' && controllerName !== 'root') {
+        route.url = '/';
+      } else {
+        route.url = `/${controllerName}${route.url}`;
+      }
+
+      if (route.preValidation === undefined) {
         route.preValidation = [];
+      } else if (!Array.isArray(route.preValidation)) {
+        route.preValidation = [route.preValidation];
       }
 
       middlewares.forEach(MiddlewareClass => {
@@ -693,14 +489,14 @@ export class IOServer {
         }
       });
 
+      this.log(7, `[*] Register controller route ${route.method} ${route.url}`);
       try {
-        this.log(
-          7,
-          `[*] Register controller route ${route.method} ${route.url}`
-        );
         this.webapp.route(route as RouteOptions);
       } catch (error) {
-        this.log(3, `[!] Unable to register route: ${error}`);
+        throw new IOServerError(
+          `Unable to register route ${String(route.method)} ${String(route.url)}: ${error}`,
+          500
+        );
       }
     });
   }
@@ -730,14 +526,10 @@ export class IOServer {
     );
     this.log(5, `################### ${timestamp} ###################`);
 
-    // Ensure Fastify is ready and Socket.IO is initialized
-    await this.webapp.ready();
-    // Wait for Socket.IO to be properly initialized
-    let retries = 0;
-    const maxRetries = 10;
-    while (!this.socketio && retries < maxRetries) {
-      await setTimeout(100);
-      retries++;
+    await this.socketReady;
+
+    if (this.socketSetupError) {
+      throw this.socketSetupError;
     }
 
     if (!this.socketio) {
@@ -763,7 +555,15 @@ export class IOServer {
       });
 
       // Setup connection handler
-      namespace.on('connection', this.handleConnection(serviceName));
+      namespace.on(
+        'connection',
+        createConnectionHandler(
+          serviceName,
+          this.methodLists.get(serviceName) || [],
+          name => this.serviceLists.get(name),
+          this.log.bind(this)
+        )
+      );
       this.log(6, `[*] Service ${serviceName} registered...`);
     });
 
@@ -837,34 +637,43 @@ export class IOServer {
    * @throws {IOServerError} When server shutdown fails
    */
   public async stop(): Promise<void> {
-    try {
-      // Stop watchers
-      const watcherPromises = Array.from(this.watcherLists.values()).map(
-        async watcher => {
-          try {
-            this.log(6, `[*] Stopping watcher ${watcher.constructor.name}`);
-            if (watcher.stop) {
-              await watcher.stop();
-            }
-          } catch (error) {
-            this.log(
-              3,
-              `[!] Error stopping ${watcher.constructor.name} watcher: ${error}`
-            );
-            throw new IOServerError(
-              `Error stopping ${watcher.constructor.name} watcher: ${error}`,
-              500
-            );
+    const watcherFailures: unknown[] = [];
+
+    await Promise.all(
+      Array.from(this.watcherLists.values()).map(async watcher => {
+        try {
+          this.log(6, `[*] Stopping watcher ${watcher.constructor.name}`);
+          if (watcher.stop) {
+            await watcher.stop();
           }
+        } catch (error) {
+          watcherFailures.push(error);
+          this.log(
+            3,
+            `[!] Error stopping ${watcher.constructor.name} watcher: ${error}`
+          );
         }
-      );
-      await Promise.all(watcherPromises);
-      this.log(6, '[*] All watchers stopped');
-      // Stop Socket.IO server
+      })
+    );
+
+    try {
+      if (this.socketio) {
+        await this.socketio.close();
+      }
       await this.webapp.close();
       this.log(6, '[*] Server stopped');
     } catch (error) {
+      if (error instanceof IOServerError) {
+        throw error;
+      }
       throw new IOServerError(`Unable to stop server: ${error}`, 500);
+    }
+
+    if (watcherFailures.length > 0) {
+      throw new IOServerError(
+        `Unable to stop ${watcherFailures.length} watcher(s): ${watcherFailures.join('; ')}`,
+        500
+      );
     }
   }
 
@@ -893,96 +702,16 @@ export class IOServer {
 
     if (options.sid) {
       const socket = ns.sockets.get(options.sid);
-      if (socket) {
-        socket.emit(options.event, options.data);
+      if (!socket) {
+        return false;
       }
+      socket.emit(options.event, options.data);
     } else {
       const target = options.room ? ns.in(options.room) : ns;
       target.emit(options.event, options.data);
     }
 
     return true;
-  }
-
-  /**
-   * Handles new WebSocket connections for a specific service
-   * @private
-   * @param {string} serviceName - The name of the service
-   * @returns {Function} Connection handler function
-   */
-  private handleConnection(serviceName: string) {
-    return (socket: any) => {
-      this.log(5, `[*] Received connection for service ${serviceName}`);
-
-      const methods = this.methodLists.get(serviceName) || [];
-      this.serviceLists.get(serviceName);
-
-      methods.forEach(method => {
-        // Skip private methods and constructor
-        if (method.startsWith('_') || method === 'constructor') {
-          return;
-        }
-
-        this.log(6, `[*] Method ${method} of ${serviceName} listening...`);
-        socket.on(method, this.handleCallback(serviceName, method, socket));
-      });
-    };
-  }
-
-  /**
-   * Creates a callback handler for WebSocket method calls
-   * @private
-   * @param {string} serviceName - The name of the service
-   * @param {string} methodName - The name of the method
-   * @param {any} socket - The Socket.IO socket instance
-   * @returns {Function} Callback handler function
-   */
-  private handleCallback(serviceName: string, methodName: string, socket: any) {
-    return async (data: any, callback?: (response: any) => void) => {
-      this.log(6, `[*] Call method ${methodName} of service ${serviceName}`);
-
-      try {
-        const service = this.serviceLists.get(serviceName);
-        if (service && service[methodName]) {
-          await service[methodName](socket, data, callback);
-        }
-      } catch (error) {
-        let ioError = error;
-        if (typeof error === 'string') {
-          ioError = new IOServerError(error, 500);
-        }
-
-        this.log(
-          5,
-          `Error on ${serviceName}:${methodName} execution: ${(ioError as any)?.stack || error}`
-        );
-
-        // Only surface intentional IOServerError details to the client.
-        // Any other (unexpected) error is reported generically so that
-        // internal information (stack traces, driver/internal messages) does
-        // not leak over the wire.
-        const isIOServerError = ioError instanceof IOServerError;
-        const payload = isIOServerError
-          ? {
-              status: 'error',
-              type: 'IOServerError',
-              message: (ioError as IOServerError).message,
-              statusCode: (ioError as IOServerError).statusCode,
-            }
-          : {
-              status: 'error',
-              type: 'Error',
-              message: 'Internal Server Error',
-              statusCode: 500,
-            };
-
-        if (callback) {
-          callback(payload);
-        } else {
-          socket.emit('error', payload);
-        }
-      }
-    };
   }
 }
 

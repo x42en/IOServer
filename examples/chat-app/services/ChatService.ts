@@ -17,6 +17,12 @@ interface Message {
 }
 
 export class ChatService extends BaseService {
+  private static readonly MAX_MESSAGES_PER_ROOM = 1000;
+  private static readonly MAX_ROOMS = 100;
+  private static readonly MAX_USERNAME_LENGTH = 20;
+  private static readonly MAX_ROOM_LENGTH = 32;
+  private static readonly MAX_MESSAGE_LENGTH = 2000;
+
   private users: Map<string, User> = new Map();
   private rooms: Map<string, Set<string>> = new Map();
   private messageHistory: Map<string, Message[]> = new Map();
@@ -31,12 +37,12 @@ export class ChatService extends BaseService {
 
   async login(
     socket: any,
-    data: { username: string },
+    data: { username?: unknown },
     callback?: (response: any) => void
   ): Promise<void> {
-    const { username } = data;
+    const username = data?.username;
 
-    if (!username || username.trim().length === 0) {
+    if (typeof username !== "string" || username.trim().length === 0) {
       const error = { status: "error", message: "Username is required" };
       if (callback) callback(error);
       else socket.emit("login_error", error);
@@ -44,6 +50,13 @@ export class ChatService extends BaseService {
     }
 
     const cleanUsername = username.trim();
+
+    if (cleanUsername.length > ChatService.MAX_USERNAME_LENGTH) {
+      const error = { status: "error", message: "Username is too long" };
+      if (callback) callback(error);
+      else socket.emit("login_error", error);
+      return;
+    }
 
     // Check if username is already taken
     if (this.usernames.has(cleanUsername.toLowerCase())) {
@@ -78,7 +91,7 @@ export class ChatService extends BaseService {
       type: "system",
     };
 
-    this.messageHistory.get("general")?.push(systemMessage);
+    this._recordMessage("general", systemMessage);
 
     // Notify room about new user
     socket.to("general").emit("user_joined", {
@@ -90,9 +103,9 @@ export class ChatService extends BaseService {
     const response = {
       status: "success",
       user: { username: cleanUsername, room: "general" },
-      roomUsers: this.getRoomUsers("general"),
-      recentMessages: this.getRecentMessages("general"),
-      availableRooms: this.getAvailableRooms(),
+      roomUsers: this._getRoomUsers("general"),
+      recentMessages: this._getRecentMessages("general"),
+      availableRooms: this._getAvailableRooms(),
     };
 
     if (callback) callback(response);
@@ -103,7 +116,7 @@ export class ChatService extends BaseService {
 
   async send_message(
     socket: any,
-    data: { content: string },
+    data: { content?: unknown },
     callback?: (response: any) => void
   ): Promise<void> {
     const user = this.users.get(socket.id);
@@ -114,8 +127,18 @@ export class ChatService extends BaseService {
       return;
     }
 
-    if (!data.content || data.content.trim().length === 0) {
+    const content = data?.content;
+
+    if (typeof content !== "string" || content.trim().length === 0) {
       const error = { status: "error", message: "Message cannot be empty" };
+      if (callback) callback(error);
+      return;
+    }
+
+    const cleanContent = content.trim();
+
+    if (cleanContent.length > ChatService.MAX_MESSAGE_LENGTH) {
+      const error = { status: "error", message: "Message is too long" };
       if (callback) callback(error);
       return;
     }
@@ -124,13 +147,13 @@ export class ChatService extends BaseService {
       id: Date.now().toString(),
       username: user.username,
       room: user.room,
-      content: data.content.trim(),
+      content: cleanContent,
       timestamp: new Date(),
       type: "message",
     };
 
     // Store message in history
-    this.messageHistory.get(user.room)?.push(message);
+    this._recordMessage(user.room, message);
 
     // Broadcast to room (including sender)
     this.appHandle.send({
@@ -146,7 +169,7 @@ export class ChatService extends BaseService {
 
   async join_room(
     socket: any,
-    data: { room: string },
+    data: { room?: unknown },
     callback?: (response: any) => void
   ): Promise<void> {
     const user = this.users.get(socket.id);
@@ -157,15 +180,34 @@ export class ChatService extends BaseService {
       return;
     }
 
-    const { room } = data;
+    const room = data?.room;
 
-    if (!room || room.trim().length === 0) {
+    if (typeof room !== "string" || room.trim().length === 0) {
       const error = { status: "error", message: "Room name is required" };
       if (callback) callback(error);
       return;
     }
 
     const cleanRoom = room.trim().toLowerCase();
+
+    if (cleanRoom.length > ChatService.MAX_ROOM_LENGTH) {
+      const error = { status: "error", message: "Room name is too long" };
+      if (callback) callback(error);
+      return;
+    }
+
+    if (
+      !this.rooms.has(cleanRoom) &&
+      this.rooms.size >= ChatService.MAX_ROOMS
+    ) {
+      const error = {
+        status: "error",
+        message: "Too many rooms, try another name",
+      };
+      if (callback) callback(error);
+      return;
+    }
+
     const oldRoom = user.room;
 
     // Leave old room
@@ -202,29 +244,29 @@ export class ChatService extends BaseService {
       type: "system",
     };
 
-    this.messageHistory.get(oldRoom)?.push(leftMessage);
-    this.messageHistory.get(cleanRoom)?.push(joinedMessage);
+    this._recordMessage(oldRoom, leftMessage);
+    this._recordMessage(cleanRoom, joinedMessage);
 
     // Notify old room
     socket.to(oldRoom).emit("user_left", {
       username: user.username,
       message: leftMessage,
-      roomUsers: this.getRoomUsers(oldRoom),
+      roomUsers: this._getRoomUsers(oldRoom),
     });
 
     // Notify new room
     socket.to(cleanRoom).emit("user_joined", {
       username: user.username,
       message: joinedMessage,
-      roomUsers: this.getRoomUsers(cleanRoom),
+      roomUsers: this._getRoomUsers(cleanRoom),
     });
 
     // Send success response
     const response = {
       status: "success",
       room: cleanRoom,
-      roomUsers: this.getRoomUsers(cleanRoom),
-      recentMessages: this.getRecentMessages(cleanRoom),
+      roomUsers: this._getRoomUsers(cleanRoom),
+      recentMessages: this._getRecentMessages(cleanRoom),
     };
 
     if (callback) callback(response);
@@ -244,7 +286,7 @@ export class ChatService extends BaseService {
       return;
     }
 
-    const roomUsers = this.getRoomUsers(user.room);
+    const roomUsers = this._getRoomUsers(user.room);
 
     if (callback) callback({ status: "success", users: roomUsers });
     else socket.emit("room_users", { users: roomUsers });
@@ -255,7 +297,7 @@ export class ChatService extends BaseService {
     data: any,
     callback?: (response: any) => void
   ): Promise<void> {
-    const availableRooms = this.getAvailableRooms();
+    const availableRooms = this._getAvailableRooms();
 
     if (callback) callback({ status: "success", rooms: availableRooms });
     else socket.emit("available_rooms", { rooms: availableRooms });
@@ -263,7 +305,7 @@ export class ChatService extends BaseService {
 
   async typing(
     socket: any,
-    data: { isTyping: boolean },
+    data: { isTyping?: unknown },
     _callback?: (response: any) => void
   ): Promise<void> {
     const user = this.users.get(socket.id);
@@ -272,7 +314,7 @@ export class ChatService extends BaseService {
 
     socket.to(user.room).emit("user_typing", {
       username: user.username,
-      isTyping: data.isTyping,
+      isTyping: Boolean(data?.isTyping),
     });
   }
 
@@ -294,13 +336,13 @@ export class ChatService extends BaseService {
         type: "system",
       };
 
-      this.messageHistory.get(user.room)?.push(systemMessage);
+      this._recordMessage(user.room, systemMessage);
 
       // Notify room
       socket.to(user.room).emit("user_left", {
         username: user.username,
         message: systemMessage,
-        roomUsers: this.getRoomUsers(user.room),
+        roomUsers: this._getRoomUsers(user.room),
       });
 
       // Clean up
@@ -311,7 +353,19 @@ export class ChatService extends BaseService {
     }
   }
 
-  private getRoomUsers(room: string): string[] {
+  private _recordMessage(room: string, message: Message): void {
+    const history = this.messageHistory.get(room);
+    if (!history) {
+      return;
+    }
+
+    history.push(message);
+    if (history.length > ChatService.MAX_MESSAGES_PER_ROOM) {
+      history.splice(0, history.length - ChatService.MAX_MESSAGES_PER_ROOM);
+    }
+  }
+
+  private _getRoomUsers(room: string): string[] {
     const userIds = this.rooms.get(room) || new Set();
     return Array.from(userIds)
       .map((id) => this.users.get(id))
@@ -319,12 +373,12 @@ export class ChatService extends BaseService {
       .map((user) => user!.username);
   }
 
-  private getRecentMessages(room: string, limit: number = 50): Message[] {
+  private _getRecentMessages(room: string, limit: number = 50): Message[] {
     const messages = this.messageHistory.get(room) || [];
     return messages.slice(-limit);
   }
 
-  private getAvailableRooms(): Array<{ name: string; userCount: number }> {
+  private _getAvailableRooms(): Array<{ name: string; userCount: number }> {
     return Array.from(this.rooms.entries()).map(([name, users]) => ({
       name,
       userCount: users.size,

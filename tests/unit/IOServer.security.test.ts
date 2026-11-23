@@ -10,6 +10,7 @@ import {
   BaseService,
   IOServerError,
 } from '../../src';
+import { validateLogLevel } from '../../src/config';
 
 const ROUTES = './tests/routes';
 
@@ -53,6 +54,24 @@ describe('IOServer security hardening', () => {
       const error = withStatus(() => new IOServer({ verbose: 'LOUD' }));
       expect(error).toBeInstanceOf(IOServerError);
       expect(error.statusCode).toBe(400);
+    });
+
+    it.each([
+      ['emerg', 'EMERGENCY'],
+      ['crit', 'CRITICAL'],
+      ['err', 'ERROR'],
+      ['warn', 'WARNING'],
+      ['notice', 'NOTIFICATION'],
+      ['info', 'INFORMATION'],
+      ['DEBUG', 'DEBUG'],
+    ] as const)('maps log level %s to %s', (input, expected) => {
+      expect(validateLogLevel(input)).toBe(expected);
+    });
+
+    it('accepts INFO through the IOServer constructor', () => {
+      expect(
+        () => new IOServer({ verbose: 'INFO', routes: ROUTES })
+      ).not.toThrow();
     });
 
     it('rejects a routes directory that does not exist', () => {

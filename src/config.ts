@@ -23,6 +23,14 @@ export const LOG_LEVELS: LogLevel[] = [
   'INFORMATION',
   'DEBUG',
 ];
+const LOG_LEVEL_ALIASES: Readonly<Record<string, LogLevel>> = {
+  EMERG: 'EMERGENCY',
+  CRIT: 'CRITICAL',
+  ERR: 'ERROR',
+  WARN: 'WARNING',
+  NOTICE: 'NOTIFICATION',
+  INFO: 'INFORMATION',
+};
 export const TRANSPORTS: TransportMode[] = ['websocket', 'polling'];
 
 export function validatePort(port: number): number {
@@ -33,11 +41,25 @@ export function validatePort(port: number): number {
   return numPort;
 }
 
+function isLogLevel(value: string): value is LogLevel {
+  return (LOG_LEVELS as readonly string[]).includes(value);
+}
+
 export function validateLogLevel(level: string): LogLevel {
-  const upperLevel = level.toUpperCase() as LogLevel;
-  if (!LOG_LEVELS.includes(upperLevel)) {
-    throw new IOServerError(`Invalid log level: ${level}`, 400);
+  const upperLevel = level.toUpperCase();
+  const canonicalLevel = LOG_LEVEL_ALIASES[upperLevel];
+
+  if (canonicalLevel !== undefined) {
+    return canonicalLevel;
   }
+
+  if (!isLogLevel(upperLevel)) {
+    throw new IOServerError(
+      `Invalid log level: ${level} (expected one of: ${LOG_LEVELS.join(', ')}, or aliases: ${Object.keys(LOG_LEVEL_ALIASES).join(', ')})`,
+      400
+    );
+  }
+
   return upperLevel;
 }
 

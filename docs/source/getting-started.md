@@ -114,6 +114,12 @@ Create a JSON file to define HTTP routes (`routes/api.json`):
 ]
 ```
 
+Route URLs are relative to the controller prefix. With no `prefix`, IOServer
+prepends `/{name}`: the routes above are served at `/api/status` and
+`/api/users`. A route already named after its controller is therefore
+duplicated — `{ "url": "/health" }` in `health.json` registers
+`/health/health`. Use `prefix: ''` for root-level routes.
+
 ## Configuration Options
 
 ### Server Options

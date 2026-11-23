@@ -9,7 +9,11 @@
 import type { FastifyCorsOptions } from '@fastify/cors';
 
 export interface IOServerOptions {
-  /** Logging verbosity level - defaults to 'ERROR' */
+  /**
+   * Logging verbosity level - defaults to 'ERROR'. Case-insensitive; aliases
+   * such as 'INFO', 'WARN' and 'NOTICE' are normalized to their canonical
+   * `LogLevel` values.
+   */
   verbose?: string;
   /** Server hostname - defaults to 'localhost' */
   host?: string;
@@ -69,7 +73,7 @@ export interface ControllerOptions {
   controller: new (appHandle: AppHandle) => any;
   /** Array of middleware classes to apply to this controller */
   middlewares?: (new () => any)[];
-  /** URL prefix for all routes in this controller */
+  /** URL prefix prepended to every route URL - defaults to /{name} */
   prefix?: string;
 }
 

@@ -1,6 +1,6 @@
 # IOServer Chat Application
 
-A complete real-time chat application built with IOServer v2.4.0 demonstrating all framework features.
+A complete real-time chat application built with IOServer v2.4.1 demonstrating all framework features.
 
 > This example is a UI and framework demonstration. Its username-only login is **not authentication** and must not be used in production. Add a real authentication middleware and authorization checks before exposing it.
 

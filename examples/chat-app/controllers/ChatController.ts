@@ -565,7 +565,7 @@ export class ChatController extends BaseController {
       status: "OK",
       timestamp: new Date().toISOString(),
       service: "IOServer Chat App",
-      version: "2.4.0",
+      version: "2.4.1",
     });
   }
 }

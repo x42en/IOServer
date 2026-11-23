@@ -1,7 +1,7 @@
 /**
  * @fileoverview Socket.IO server creation and service event dispatch.
  *
- * @version 2.4.0
+ * @version 2.4.1
  * @since 2.4.0
  */
 

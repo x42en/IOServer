@@ -457,7 +457,7 @@ export class ApiController extends BaseController {
       status: 'OK',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      version: '2.4.0',
+      version: '2.4.1',
     };
 
     reply.send(status);

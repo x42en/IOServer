@@ -2,14 +2,18 @@
  * @fileoverview Public types for the IOServer framework.
  *
  * @author Ben Mz <0x42en@users.noreply.github.com>
- * @version 2.4.0
+ * @version 2.4.1
  * @since 1.0.0
  */
 
 import type { FastifyCorsOptions } from '@fastify/cors';
 
 export interface IOServerOptions {
-  /** Logging verbosity level - defaults to 'ERROR' */
+  /**
+   * Logging verbosity level - defaults to 'ERROR'. Case-insensitive; aliases
+   * such as 'INFO', 'WARN' and 'NOTICE' are normalized to their canonical
+   * `LogLevel` values.
+   */
   verbose?: string;
   /** Server hostname - defaults to 'localhost' */
   host?: string;
@@ -69,7 +73,7 @@ export interface ControllerOptions {
   controller: new (appHandle: AppHandle) => any;
   /** Array of middleware classes to apply to this controller */
   middlewares?: (new () => any)[];
-  /** URL prefix for all routes in this controller */
+  /** URL prefix prepended to every route URL - defaults to /{name} */
   prefix?: string;
 }
 

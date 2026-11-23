@@ -191,17 +191,28 @@ class UserController extends BaseController {
   }
 }
 
-server.addController({ name: 'user', controller: UserController });
+server.addController({
+  name: 'user',
+  controller: UserController,
+  prefix: '/users',
+});
 ```
 
 Corresponding route file `routes/user.json`:
 
 ```json
 [
-  { "method": "GET", "url": "/users/:id", "handler": "getUser" },
-  { "method": "POST", "url": "/users", "handler": "createUser" }
+  { "method": "GET", "url": "/:id", "handler": "getUser" },
+  { "method": "POST", "url": "/", "handler": "createUser" }
 ]
 ```
+
+Routes are registered as `prefix + url` (`GET /users/:id`, `POST /users`).
+
+> Without `prefix`, IOServer prepends `/{name}` to every route URL. A
+> `health.json` file containing `{ "url": "/health" }` is therefore registered
+> as `/health/health`, not `/health`. Use `prefix: ''` to mount routes at the
+> root, or keep route URLs relative to the controller name.
 
 Registration options:
 
@@ -209,6 +220,7 @@ Registration options:
 | ------------- | ----------------------- | -------------------------------------------------------------- |
 | `name`        | `string`                | Must match the JSON route file basename (`routes/<name>.json`) |
 | `controller`  | `typeof BaseController` | Controller class (not an instance)                             |
+| `prefix`      | `string`                | URL prefix; defaults to `/{name}`, prepended to each route URL |
 | `middlewares` | `BaseMiddleware[]`      | Optional middleware chain for all routes of this controller    |
 
 ### Managers — Injectable singletons
@@ -327,20 +339,20 @@ server.addService({
 const server = new IOServer(options);
 ```
 
-| Option              | Type                 | Default                   | Description                                                     |
-| ------------------- | -------------------- | ------------------------- | --------------------------------------------------------------- |
-| `host`              | `string`             | `'localhost'`             | Bind address                                                    |
-| `port`              | `number`             | `8080`                    | Listen port                                                     |
-| `verbose`           | `string`             | `'ERROR'`                 | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                 |
-| `cookie`            | `boolean`            | `false`                   | Enable Socket.IO cookies                                        |
-| `mode`              | `string \| string[]` | `['websocket','polling']` | Socket.IO transport(s); invalid values throw                    |
-| `cors`              | `object`             | `undefined`               | Fastify CORS options (applied to HTTP and Socket.IO)            |
-| `routes`            | `string`             | `'./routes'`              | Directory containing JSON route files; must exist when supplied |
-| `bodyLimit`         | `number`             | Fastify default           | Maximum HTTP request body size in bytes                         |
-| `maxHttpBufferSize` | `number`             | Socket.IO default         | Maximum Socket.IO message size in bytes                         |
-| `trustProxy`        | `boolean`            | `false`                   | Trust reverse-proxy headers                                     |
-| `rootDir`           | `string`             | `undefined`               | Static files directory (dotfiles are not served)                |
-| `spaFallback`       | `boolean`            | `true` with `rootDir`     | Serve `index.html` for unknown GET/HEAD routes                  |
+| Option              | Type                 | Default                   | Description                                                                                                          |
+| ------------------- | -------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `host`              | `string`             | `'localhost'`             | Bind address                                                                                                         |
+| `port`              | `number`             | `8080`                    | Listen port                                                                                                          |
+| `verbose`           | `string`             | `'ERROR'`                 | Log level, case-insensitive (`EMERGENCY`…`DEBUG`; aliases `INFO`, `WARN`, `NOTICE`, `CRIT`, `ERR`, `EMERG` accepted) |
+| `cookie`            | `boolean`            | `false`                   | Enable Socket.IO cookies                                                                                             |
+| `mode`              | `string \| string[]` | `['websocket','polling']` | Socket.IO transport(s); invalid values throw                                                                         |
+| `cors`              | `object`             | `undefined`               | Fastify CORS options (applied to HTTP and Socket.IO)                                                                 |
+| `routes`            | `string`             | `'./routes'`              | Directory containing JSON route files; must exist when supplied                                                      |
+| `bodyLimit`         | `number`             | Fastify default           | Maximum HTTP request body size in bytes                                                                              |
+| `maxHttpBufferSize` | `number`             | Socket.IO default         | Maximum Socket.IO message size in bytes                                                                              |
+| `trustProxy`        | `boolean`            | `false`                   | Trust reverse-proxy headers                                                                                          |
+| `rootDir`           | `string`             | `undefined`               | Static files directory (dotfiles are not served)                                                                     |
+| `spaFallback`       | `boolean`            | `true` with `rootDir`     | Serve `index.html` for unknown GET/HEAD routes                                                                       |
 
 ### CORS example
 

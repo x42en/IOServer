@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.1] — 2026-11-23
+
+### Fixed
+
+- `verbose` now accepts the common log-level aliases `EMERG`, `CRIT`, `ERR`,
+  `WARN`, `NOTICE` and `INFO`, so `LOG_LEVEL=INFO` works instead of failing
+  with `Invalid log level`. Aliases are normalized to the canonical `LogLevel`
+  values exposed by `appHandle.verbose`.
+
+### Changed
+
+- Documentation now states that routes registered without an explicit `prefix`
+  are nested under `/{controllerName}`, so `{ "url": "/health" }` in
+  `health.json` is served at `/health/health`, not `/health`.
+
 ## [2.4.0] — 2026-11-22
 
 ### Added
@@ -181,7 +196,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Releases prior to 2.0.0 are documented in the
 > [Git history](https://github.com/x42en/IOServer/releases).
 
-[Unreleased]: https://github.com/x42en/IOServer/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/x42en/IOServer/compare/v2.4.1...HEAD
+[2.4.1]: https://github.com/x42en/IOServer/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/x42en/IOServer/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/x42en/IOServer/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/x42en/IOServer/compare/v2.2.0...v2.2.1

@@ -80,7 +80,7 @@ Registers an HTTP controller with route mapping.
 
 - `options.name`: Controller name (matches route file)
 - `options.controller`: Controller class constructor
-- `options.prefix`: URL prefix (optional)
+- `options.prefix`: URL prefix (optional, defaults to `/{name}`)
 - `options.middlewares`: Array of middleware classes (optional)
 
 **Example:**
@@ -93,6 +93,12 @@ server.addController({
   middlewares: [ValidationMiddleware],
 });
 ```
+
+**Route URL resolution:** routes are registered as `prefix + route.url`. When
+`prefix` is omitted, the controller name is prepended to every route URL, so
+`{ "url": "/health" }` in `health.json` is registered as `/health/health`, not
+`/health`. Use `prefix: ''` to mount the controller at the root, or an explicit
+prefix such as `prefix: '/api'` and request `/api/health`.
 
 ##### `sendTo(options: SendToOptions): boolean`
 
@@ -304,7 +310,7 @@ interface ControllerOptions {
   name: string; // Controller name
   controller: new (appHandle: AppHandle) => any; // Controller class
   middlewares?: (new () => any)[]; // Middleware classes
-  prefix?: string; // URL prefix
+  prefix?: string; // URL prefix (default: /{name})
 }
 ```
 
@@ -425,6 +431,10 @@ interface ErrorResponse {
 - `5` - NOTIFICATION
 - `6` - INFORMATION
 - `7` - DEBUG
+
+`verbose` values are case-insensitive and accept the aliases `EMERG`, `CRIT`,
+`ERR`, `WARN`, `NOTICE` and `INFO`, normalized to the canonical level (for
+example `LOG_LEVEL=INFO` sets `INFORMATION`).
 
 ### Usage
 
